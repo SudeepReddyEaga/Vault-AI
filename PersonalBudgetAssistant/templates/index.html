@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Budget Assistant | AI Agent Copilot</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="dark-theme">
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>VaultAI</h2>
+                    <span>Budget Agent</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#expenses" class="nav-item" data-tab="expenses">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Expense Log</span>
+                </a>
+                <a href="#categories" class="nav-item" data-tab="categories">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>Category Budgets</span>
+                </a>
+                <a href="#affordability" class="nav-item" data-tab="affordability">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Affordability Check</span>
+                </a>
+                <a href="#ml-forecast" class="nav-item" data-tab="ml-forecast">
+                    <i class="fa-solid fa-brain"></i>
+                    <span>ML Forecast & Trends</span>
+                </a>
+                <a href="#calendar" class="nav-item" data-tab="calendar">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span>Financial Calendar</span>
+                </a>
+                <a href="#agent-trace" class="nav-item" data-tab="agent-trace">
+                    <i class="fa-solid fa-network-wired"></i>
+                    <span>Agent Plan-Act Trace</span>
+                </a>
+
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="agent-status-card">
+                    <div class="status-indicator online"></div>
+                    <div class="status-info">
+                        <span class="status-title">Agent Engine</span>
+                        <span class="status-sub" id="modeStatusText">Autonomous Mode</span>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btnResetSession" title="Reset Budget Memory">
+                    <i class="fa-solid fa-rotate-left"></i> Reset Memory
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 id="pageTitle">Financial Dashboard</h1>
+                    <p class="subtitle">AI-Powered Autonomous Personal Wealth & Budget Management</p>
+                </div>
+
+                <div class="header-right">
+                    <div class="global-period-filter flex-align-gap" style="background: rgba(255,255,255,0.06); padding: 0.35rem 0.8rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12);">
+                        <i class="fa-solid fa-calendar-days" style="color: var(--accent-cyan); font-size: 0.9rem;"></i>
+                        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Period Scope:</span>
+                        <select id="globalMonthSelect" style="background: transparent; border: none; color: #fff; font-weight: 600; font-size: 0.85rem; cursor: pointer; outline: none;">
+                            <option value="all" style="background: #111827;">All Months</option>
+                            <option value="1" style="background: #111827;">January</option>
+                            <option value="2" style="background: #111827;">February</option>
+                            <option value="3" style="background: #111827;">March</option>
+                            <option value="4" style="background: #111827;">April</option>
+                            <option value="5" style="background: #111827;">May</option>
+                            <option value="6" style="background: #111827;">June</option>
+                            <option value="7" style="background: #111827;">July</option>
+                            <option value="8" selected style="background: #111827;">August</option>
+                            <option value="9" style="background: #111827;">September</option>
+                            <option value="10" style="background: #111827;">October</option>
+                            <option value="11" style="background: #111827;">November</option>
+                            <option value="12" style="background: #111827;">December</option>
+                        </select>
+                        <select id="globalYearSelect" style="background: transparent; border: none; color: #fff; font-weight: 600; font-size: 0.85rem; cursor: pointer; outline: none;">
+                            <option value="all" style="background: #111827;">All Years</option>
+                            <option value="2020" style="background: #111827;">2020</option>
+                            <option value="2021" style="background: #111827;">2021</option>
+                            <option value="2022" style="background: #111827;">2022</option>
+                            <option value="2023" style="background: #111827;">2023</option>
+                            <option value="2024" style="background: #111827;">2024</option>
+                            <option value="2025" style="background: #111827;">2025</option>
+                            <option value="2026" selected style="background: #111827;">2026</option>
+                            <option value="2027" style="background: #111827;">2027</option>
+                            <option value="2028" style="background: #111827;">2028</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-secondary" id="btnVoiceControl" title="Toggle Continuous Hands-Free Voice Commands">
+                        <i class="fa-solid fa-microphone-slash" id="voiceControlIcon"></i>
+                        <span id="voiceControlText">Voice Commands</span>
+                    </button>
+                    <button class="btn btn-secondary" id="btnQuickIncome">
+                        <i class="fa-solid fa-plus-circle"></i> Set Income
+                    </button>
+                    <button class="btn btn-secondary" id="btnQuickSavings">
+                        <i class="fa-solid fa-bullseye"></i> Savings Goal
+                    </button>
+                    <button class="btn btn-primary toggle-chat-btn" id="btnToggleChat">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>AI Assistant</span>
+                        <span class="chat-badge pulse" id="chatBadge">Agent Active</span>
+                    </button>
+                </div>
+
+            </header>
+
+
+            <!-- Dynamic Warning Alert Banner Container -->
+            <div id="alertContainer" class="alert-container"></div>
+
+            <!-- Tab: Dashboard -->
+            <section id="tab-dashboard" class="tab-content active">
+                <!-- KPI Stats Cards Grid -->
+                <div class="kpi-grid">
+                    <div class="kpi-card income-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Total Income</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                        </div>
+                        <div class="kpi-value" id="kpiIncome">$0.00</div>
+                        <div class="kpi-footer">
+                            <span class="kpi-subtext">Base Available Capital</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card spent-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Total Spent</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                        </div>
+                        <div class="kpi-value" id="kpiSpent">$0.00</div>
+                        <div class="kpi-footer">
+                            <span class="kpi-subtext" id="kpiSpentPercent">0% of income spent</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card balance-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Current Balance</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                        </div>
+                        <div class="kpi-value" id="kpiBalance">$0.00</div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" id="balanceProgressBar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card savings-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Savings Target</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+                        </div>
+                        <div class="kpi-value" id="kpiSavingsGoal">$0.00</div>
+                        <div class="kpi-footer">
+                            <span class="badge" id="kpiSavingsBadge">Status: Checking</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts & Analytics Section with Customization Controls -->
+                <div class="chart-controls-bar glass-panel mb-3 flex-between">
+                    <div class="control-group">
+                        <label><i class="fa-solid fa-chart-line"></i> Chart Type:</label>
+                        <select id="spendingChartTypeSelector">
+                            <option value="doughnut">Doughnut Chart 🍩</option>
+                            <option value="pie">Pie Chart 🥧</option>
+                            <option value="polarArea">Polar Area 🌐</option>
+                            <option value="bar">Bar Chart 📊</option>
+                            <option value="line">Line Chart 📈</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label><i class="fa-solid fa-palette"></i> Color Theme:</label>
+                        <select id="chartColorPaletteSelector">
+                            <option value="cyber">Cyber Neon (Indigo/Cyan)</option>
+                            <option value="sunset">Sunset Glow (Coral/Amber)</option>
+                            <option value="emerald">Emerald Mint (Teal/Green)</option>
+                            <option value="royal">Royal Gold (Purple/Gold)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="glass-panel chart-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-chart-donut"></i> Category Spending Breakdown</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="spendingDoughnutChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel chart-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-chart-column"></i> Budget Limits vs Actual Spent</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="budgetBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Category Progress Overview Grid -->
+                <div class="glass-panel mt-4">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-sliders"></i> Active Category Budget Health</h3>
+                        <button class="btn btn-ghost btn-sm" id="btnManageCategories">
+                            <i class="fa-solid fa-gear"></i> Set Limits
+                        </button>
+                    </div>
+                    <div class="category-grid" id="categoryGrid">
+                        <!-- Dynamic category cards injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Expense Log -->
+            <section id="tab-expenses" class="tab-content">
+                <div class="glass-panel">
+                    <div class="panel-header flex-between">
+                        <div>
+                            <h3><i class="fa-solid fa-list-check"></i> Recorded Expense Ledger</h3>
+                            <p class="text-muted">Direct interface synced with AI Agent Memory</p>
+                        </div>
+                        <button class="btn btn-primary" id="btnOpenAddExpenseModal">
+                            <i class="fa-solid fa-plus"></i> Record Expense
+                        </button>
+                    </div>
+
+                    <!-- Filter Controls -->
+                    <div class="table-controls mt-3">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="expenseSearchInput" placeholder="Search expense item...">
+                        </div>
+                        <div class="filter-box">
+                            <select id="expenseCategoryFilter">
+                                <option value="all">All Categories</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Expense Table -->
+                    <div class="table-responsive mt-3">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Item Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No expenses logged yet. Add one or talk to the AI Assistant!</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Category Budgets -->
+            <section id="tab-categories" class="tab-content">
+                <div class="grid-2">
+                    <!-- Form to add category limit -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-pen-to-square"></i> Set Category Budget Limit</h3>
+                        </div>
+                        <form id="formCategoryBudget" class="mt-3">
+                            <div class="form-group">
+                                <label for="catNameInput">Category Name</label>
+                                <input type="text" id="catNameInput" placeholder="e.g. Food, Travel, Housing, Shopping" required>
+                            </div>
+                            <div class="form-group mt-3">
+                                <label for="catLimitInput">Monthly Limit ($)</label>
+                                <input type="number" step="0.01" id="catLimitInput" placeholder="e.g. 500.00" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mt-4">
+                                <i class="fa-solid fa-save"></i> Save Category Limit
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Category Status Cards -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-list-ol"></i> Configured Budget Limits</h3>
+                        </div>
+                        <div class="category-list-wrap mt-3" id="categoryLimitsList">
+                            <!-- Dynamic list -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Affordability Check -->
+            <section id="tab-affordability" class="tab-content">
+                <div class="glass-panel max-w-700 mx-auto">
+                    <div class="panel-header text-center">
+                        <div class="icon-header-badge">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <h2>Smart Affordability Checker</h2>
+                        <p class="text-muted">Simulate purchase impact against live balance and category limits</p>
+                    </div>
+
+                    <form id="formAffordabilityCheck" class="mt-4">
+                        <div class="form-group">
+                            <label for="affItem">Item Name</label>
+                            <input type="text" id="affItem" placeholder="e.g. Smart Watch, Plane Ticket, Leather Jacket" required>
+                        </div>
+
+                        <div class="form-row mt-3">
+                            <div class="form-group col">
+                                <label for="affCost">Cost Amount ($)</label>
+                                <input type="number" step="0.01" id="affCost" placeholder="e.g. 299.99" required>
+                            </div>
+                            <div class="form-group col">
+                                <label for="affCategory">Category</label>
+                                <select id="affCategory">
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="General">General</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Housing">Housing</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-gradient w-100 mt-4">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Evaluate Affordability
+                        </button>
+                    </form>
+
+                    <!-- Evaluation Result Box -->
+                    <div id="affordabilityResultCard" class="result-card hidden mt-4">
+                        <!-- Dynamic Result injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: ML Forecast & Trend Analytics -->
+            <section id="tab-ml-forecast" class="tab-content">
+                <div class="kpi-grid">
+                    <div class="kpi-card spent-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">ML Forecasted Spend</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                        </div>
+                        <div class="kpi-value" id="mlPredictedSpend">$0.00</div>
+                        <div class="kpi-footer">
+                            <span class="badge badge-info" id="mlTrendBadge">Trend: Calculating</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card savings-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Financial Health Index</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                        </div>
+                        <div class="kpi-value" id="mlHealthScore">-- / 100</div>
+                        <div class="kpi-footer">
+                            <span class="badge" id="mlHealthBadge">Rating: Checking</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid mt-4">
+                    <!-- Forecast Chart -->
+                    <div class="glass-panel chart-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-chart-line"></i> Current Spend vs ML Forecast</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="mlForecastChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Risk Flags & Recommendations -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-triangle-exclamation"></i> Overspend Risk & Anomaly Detector</h3>
+                        </div>
+                        <div class="category-list-wrap mt-3" id="mlRiskContainer">
+                            <div class="text-muted text-center py-3">No high-risk category overspends predicted.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Financial Calendar & Historical Ledger -->
+            <section id="tab-calendar" class="tab-content">
+                <div class="calendar-controls-bar glass-panel flex-between mb-4">
+                    <div class="flex-align-gap">
+                        <button class="btn btn-ghost" id="btnPrevMonth"><i class="fa-solid fa-chevron-left"></i></button>
+                        <h3 id="calendarMonthYearTitle"><i class="fa-solid fa-calendar"></i> August 2026</h3>
+                        <button class="btn btn-ghost" id="btnNextMonth"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+
+                    <div class="flex-align-gap">
+                        <div class="form-group col" style="margin-bottom: 0;">
+                            <select id="calendarMonthSelect">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8" selected>August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        <div class="form-group col" style="margin-bottom: 0;">
+                            <select id="calendarYearSelect">
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026" selected>2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-grid mb-4">
+                    <div class="kpi-card income-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Total Income</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                        </div>
+                        <div class="kpi-value" id="calIncome">$0.00</div>
+                    </div>
+
+                    <div class="kpi-card spent-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Selected Month Spent</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                        </div>
+                        <div class="kpi-value" id="calMonthlySpent">$0.00</div>
+                    </div>
+
+                    <div class="kpi-card balance-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Period Net Balance</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                        </div>
+                        <div class="kpi-value" id="calBalance">$0.00</div>
+                    </div>
+
+                    <div class="kpi-card savings-card">
+                        <div class="kpi-header">
+                            <span class="kpi-label">Daily Average Spend</span>
+                            <div class="kpi-icon"><i class="fa-solid fa-calculator"></i></div>
+                        </div>
+                        <div class="kpi-value" id="calDailyAverage">$0.00</div>
+                    </div>
+                </div>
+
+
+                <!-- Financial Calendar Grid -->
+                <div class="glass-panel mb-4">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-calendar-days"></i> Monthly Expenditure Calendar</h3>
+                    </div>
+                    <div class="calendar-grid-container mt-3">
+                        <div class="calendar-days-header">
+                            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                        </div>
+                        <div class="calendar-cells-grid" id="calendarCellsGrid">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Yearly Month-by-Month Expenditure Chart -->
+                <div class="glass-panel mb-4">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-chart-bar"></i> 12-Month Yearly Expenditure Breakdown</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="yearlySpendChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Agent Plan-Act Trace -->
+            <section id="tab-agent-trace" class="tab-content">
+
+
+                <div class="glass-panel">
+                    <div class="panel-header flex-between">
+                        <div>
+                            <h3><i class="fa-solid fa-network-wired"></i> Agent Plan-Act Loop Live Trace Log</h3>
+                            <p class="text-muted">Inspection of tool calls, memory state updates, and multi-step reasoning</p>
+                        </div>
+                        <span class="badge badge-info"><i class="fa-solid fa-microchip"></i> Plan-Act Architecture</span>
+                    </div>
+
+                    <div class="trace-history-container mt-3" id="globalTraceContainer">
+                        <div class="trace-empty-state">
+                            <i class="fa-solid fa-code-branch"></i>
+                            <p>No agent tool traces executed yet. Start chatting with the AI Assistant to watch live tool calls in action!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- AI Assistant Floating / Side Chat Panel -->
+        <aside class="chat-drawer" id="chatDrawer">
+            <div class="chat-header">
+                <div class="bot-info">
+                    <div class="bot-avatar">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <h4>VaultAI Assistant</h4>
+                        <span class="online-tag"><i class="fa-solid fa-circle"></i> Plan-Act Agent Ready</span>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button class="icon-btn" id="btnStopAudio" title="Stop Voice Audio Playback">
+                        <i class="fa-solid fa-circle-stop text-danger"></i>
+                    </button>
+                    <button class="icon-btn" id="btnTTSToggle" title="Mute/Unmute Voice Output">
+                        <i class="fa-solid fa-volume-high" id="ttsIcon"></i>
+                    </button>
+                    <button class="icon-btn" id="btnClearChat" title="Clear Chat Window">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button class="icon-btn" id="btnCloseChat" title="Close Drawer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Quick Action Prompt Pills -->
+            <div class="quick-prompts-bar">
+                <div class="prompt-pill" data-prompt="Set my income to 5000">
+                    <i class="fa-solid fa-coins"></i> Income $5,000
+                </div>
+                <div class="prompt-pill" data-prompt="Set a savings goal of 1000">
+                    <i class="fa-solid fa-bullseye"></i> Goal $1,000
+                </div>
+                <div class="prompt-pill" data-prompt="Added 45 dollars for dinner under food">
+                    <i class="fa-solid fa-utensils"></i> Spent $45 Food
+                </div>
+                <div class="prompt-pill" data-prompt="Can I afford a 250 dollar smartwatch in shopping?">
+                    <i class="fa-solid fa-cart-shopping"></i> Afford $250?
+                </div>
+                <div class="prompt-pill" data-prompt="Show me a full spending summary">
+                    <i class="fa-solid fa-chart-line"></i> Summary
+                </div>
+            </div>
+
+            <!-- Chat Message List -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome Bot Message -->
+                <div class="message bot-message">
+                    <div class="message-content">
+                        <p>👋 Hello! I am your <strong>Personal Budget Assistant</strong>.</p>
+                        <p>I am an autonomous agent equipped with a <strong>Plan-Act loop</strong> and 5 core financial memory tools. Tell me what you'd like to do!</p>
+                    </div>
+                    <span class="message-time">Just now</span>
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea id="chatInput" placeholder="Ask e.g. 'Can I afford $150 jacket?' or 'Add $50 expense for fuel'" rows="1"></textarea>
+                    <button class="icon-btn voice-btn" id="btnMicInput" title="Voice Input">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button class="btn btn-primary send-btn" id="btnSendChat">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal: Add Expense -->
+    <div class="modal-overlay hidden" id="modalExpense">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-plus-circle"></i> Add New Expense</h3>
+                <button class="icon-btn modal-close" id="btnCloseModalExpense"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formAddExpenseModal" class="modal-body">
+                <div class="form-group">
+                    <label for="modalItemName">Item Name / Description</label>
+                    <input type="text" id="modalItemName" placeholder="e.g. Grocery Shopping" required>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="modalItemAmount">Amount ($)</label>
+                    <input type="number" step="0.01" id="modalItemAmount" placeholder="e.g. 64.50" required>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="modalItemCategory">Category</label>
+                    <input type="text" id="modalItemCategory" placeholder="e.g. Food, Travel, General" list="categoryDatalist" required>
+                    <datalist id="categoryDatalist">
+                        <option value="Food">
+                        <option value="Travel">
+                        <option value="Housing">
+                        <option value="Shopping">
+                        <option value="General">
+                    </datalist>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="modalItemDate">Expense Date</label>
+                    <input type="date" id="modalItemDate">
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="button" class="btn btn-ghost" id="btnCancelModalExpense">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Add Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Expense -->
+    <div class="modal-overlay hidden" id="modalEditExpense">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Edit Historical Expense</h3>
+                <button class="icon-btn modal-close" id="btnCloseModalEditExpense"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formEditExpenseModal" class="modal-body">
+                <input type="hidden" id="editExpenseIndex">
+                <div class="form-group">
+                    <label for="editItemName">Item Name / Description</label>
+                    <input type="text" id="editItemName" required>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="editItemAmount">Amount ($)</label>
+                    <input type="number" step="0.01" id="editItemAmount" required>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="editItemCategory">Category</label>
+                    <input type="text" id="editItemCategory" list="categoryDatalist" required>
+                </div>
+                <div class="form-group mt-3">
+                    <label for="editItemDate">Date (YYYY-MM-DD)</label>
+                    <input type="date" id="editItemDate" required>
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="button" class="btn btn-ghost" id="btnCancelModalEditExpense">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Modal: Quick Income -->
+    <div class="modal-overlay hidden" id="modalIncome">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-hand-holding-dollar"></i> Set Monthly Income</h3>
+                <button class="icon-btn modal-close" id="btnCloseModalIncome"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formModalIncome" class="modal-body">
+                <div class="form-group">
+                    <label for="incomeAmountInput">Income Amount ($)</label>
+                    <input type="number" step="0.01" id="incomeAmountInput" placeholder="e.g. 4500.00" required>
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="button" class="btn btn-ghost" id="btnCancelModalIncome">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save Income</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Quick Savings Goal -->
+    <div class="modal-overlay hidden" id="modalSavings">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bullseye"></i> Set Savings Goal</h3>
+                <button class="icon-btn modal-close" id="btnCloseModalSavings"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="formModalSavings" class="modal-body">
+                <div class="form-group">
+                    <label for="savingsAmountInput">Savings Goal Target ($)</label>
+                    <input type="number" step="0.01" id="savingsAmountInput" placeholder="e.g. 1000.00" required>
+                </div>
+                <div class="modal-footer mt-4">
+                    <button type="button" class="btn btn-ghost" id="btnCancelModalSavings">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-bullseye"></i> Update Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main JavaScript App -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
