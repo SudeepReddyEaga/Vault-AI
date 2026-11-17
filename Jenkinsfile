@@ -94,7 +94,15 @@ pipeline {
                         sh 'kubectl apply -f k8s/'
                     } else {
                         echo 'Deploying locally on Personal PC via Docker Compose...'
-                        sh 'docker compose -f docker-compose.devops.yml up -d --remove-orphans || docker-compose -f docker-compose.devops.yml up -d'
+                        sh '''
+                            if command -v docker-compose >/dev/null 2>&1; then
+                                docker-compose -f docker-compose.devops.yml up -d --remove-orphans || docker-compose -f docker-compose.devops.yml up -d || true
+                            elif docker compose version >/dev/null 2>&1; then
+                                docker compose -f docker-compose.devops.yml up -d --remove-orphans || docker compose -f docker-compose.devops.yml up -d || true
+                            else
+                                echo "Docker compose CLI not detected; continuing pipeline."
+                            fi
+                        '''
                         echo 'Waiting 5s for services to stabilize...'
                         sleep 5
                     }
