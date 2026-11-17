@@ -1,0 +1,163 @@
+services:
+  # 1. PostgreSQL Relational Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rural_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword2026
+      POSTGRES_DB: rural_platform_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - platform_network
+
+  # 2. Redis In-Memory Cache
+  redis:
+    image: redis:7-alpine
+    container_name: rural_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - platform_network
+
+  # 3. Auth Service (Port 8001: JWT, RBAC, User Profiles)
+  auth-service:
+    build:
+      context: ./services/auth_service
+      dockerfile: Dockerfile
+    container_name: auth_service
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgrespassword2026@postgres:5432/rural_platform_db
+      JWT_SECRET: super-secret-rural-enterprise-jwt-key-2026
+    volumes:
+      - ./database:/database:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - platform_network
+
+  # 4. Advisory Service (Port 8002: Module 1 Feasibility & Module 2 Concessional Lending)
+  advisory-service:
+    build:
+      context: ./services/advisory_service
+      dockerfile: Dockerfile
+    container_name: advisory_service
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      ENVIRONMENT: production
+    networks:
+      - platform_network
+
+  # 5. Marketplace Service (Port 8003: Product Catalog, Orders, Redis Top-Selling Caching)
+  marketplace-service:
+    build:
+      context: ./services/marketplace_service
+      dockerfile: Dockerfile
+    container_name: marketplace_service
+    restart: always
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgrespassword2026@postgres:5432/rural_platform_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - platform_network
+
+  # 6. Recommendation ML Service (Port 8004: Vector Cosine Recommendations)
+  recommendation-service:
+    build:
+      context: ./services/recommendation_service
+      dockerfile: Dockerfile
+    container_name: recommendation_service
+    restart: always
+    ports:
+      - "8004:8004"
+    environment:
+      ENVIRONMENT: production
+    networks:
+      - platform_network
+
+  # 7. Analytics ML Service (Port 8005: DSCR & Seller 90-Day Revenue Forecasting)
+  analytics-service:
+    build:
+      context: ./services/analytics_service
+      dockerfile: Dockerfile
+    container_name: analytics_service
+    restart: always
+    ports:
+      - "8005:8005"
+    environment:
+      ENVIRONMENT: production
+    networks:
+      - platform_network
+
+  # 8. Personal Budget Assistant Service (Port 8006: VaultAI ReAct Agent, Memory, Scikit ML)
+  personal-budget-service:
+    build:
+      context: ./services/personal_budget_service
+      dockerfile: Dockerfile
+    container_name: personal_budget_service
+    restart: always
+    ports:
+      - "8006:8006"
+    environment:
+      JWT_SECRET: super-secret-rural-enterprise-jwt-key-2026
+    networks:
+      - platform_network
+
+  # 9. React Dual-Portal Frontend (Port 3000 -> 80)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: platform_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+      - advisory-service
+      - marketplace-service
+      - recommendation-service
+      - analytics-service
+      - personal-budget-service
+    networks:
+      - platform_network
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  platform_network:
+    driver: bridge

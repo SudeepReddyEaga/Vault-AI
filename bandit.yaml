@@ -1,0 +1,9 @@
+### Bandit SAST Security Gate Configuration (Section 8.1)
+# B101: assert in test suites
+# B311: pseudo-random generators
+# B104: 0.0.0.0 binding inside container entrypoint
+# B110: try/except pass fallback blocks
+skips: ['B101', 'B311', 'B104', 'B110']
+exclude_dirs: ['tests', 'extracted_images', '.git', 'venv']
+number_of_lines: 5
+verbose: true

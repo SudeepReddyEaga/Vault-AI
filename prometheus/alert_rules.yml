@@ -1,0 +1,38 @@
+groups:
+  - name: vaultai_alerts
+    rules:
+      - alert: MicroserviceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Microservice {{ $labels.instance }} is DOWN"
+          description: "Service has been unreachable for more than 1 minute."
+
+      - alert: HighHttp5xxErrorRate
+        expr: rate(pba_http_requests_total{status_code=~"5.."}[2m]) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx Error Rate detected"
+          description: "5xx error rate exceeds 5% of total traffic on endpoint {{ $labels.endpoint }}."
+
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, sum(rate(pba_http_request_duration_seconds_bucket[5m])) by (le)) > 1.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 Request Latency exceeds 1.5s"
+          description: "Microservice latency is degrading across endpoints."
+
+      - alert: LowBudgetBalanceWarning
+        expr: pba_budget_balance_amount < 200
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low Live Balance Warning"
+          description: "User balance is below $200 threshold."

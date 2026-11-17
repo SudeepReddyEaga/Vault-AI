@@ -1,0 +1,14 @@
+# Terraform Production Deployment Configuration
+enable_aws         = true
+aws_region         = "us-east-1"
+environment        = "prod"
+vpc_cidr           = "10.0.0.0/16"
+
+# GitHub & Docker Hub CI/CD Configuration
+github_repo_url    = "https://github.com/sudee/VaultAI.git"
+dockerhub_username = "pba"
+dockerhub_password = "YOUR_DOCKERHUB_ACCESS_TOKEN_HERE"
+image_tag          = "latest"
+
+# PostgreSQL Credentials
+db_password        = "postgrespassword2026"

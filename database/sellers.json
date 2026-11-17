@@ -1,0 +1,124 @@
+[
+  {
+    "user_id": 4,
+    "email": "kisan.agritech@rural.in",
+    "password_hash": "$2b$12$K1.GfO7s/1hTz5vR0ZtX2uC3y4b5a6c7d8e9f0g1h2i3j4k5l6m7n",
+    "role": "seller",
+    "status": "ACTIVE",
+    "seller_profile": {
+      "seller_id": 501,
+      "merchant_store_name": "Kisan Agro Machinery & Supplies",
+      "legal_company_name": "Kisan Agri-Tech & Industrial Equipment Pvt Ltd",
+      "seller_tier": "PLATINUM_RURAL_HUB",
+      "merchant_badge": "Amazon Fulfilled (FBA) & SCA Certified",
+      "compliance_tax": {
+        "gstin": "27AABCK1234F1Z5",
+        "pan_number": "AABCK1234F",
+        "is_sca_certified": true,
+        "sca_nodal_license": "SCA-MKT-MH-2026-4401",
+        "iso_certification": "ISO 9001:2015 Machinery Quality Standard"
+      },
+      "fulfillment_logistics": {
+        "fulfillment_model": "FBA_RURAL_HUB",
+        "dispatch_sla_hours": 24,
+        "primary_warehouse": {
+          "warehouse_code": "WH-PUN-BAR-01",
+          "street_address": "Shed 12-B, MIDC Industrial Area, Baramati",
+          "district": "Pune",
+          "state": "Maharashtra",
+          "postal_code": "413133",
+          "storage_capacity_sqft": 15000,
+          "has_cold_chain_storage": true
+        },
+        "coverage_radius_km": 150,
+        "courier_partners": ["Rural-Post Express", "Kisan Logistics", "BlueDart Agri"]
+      },
+      "merchant_performance": {
+        "store_rating": 4.88,
+        "total_reviews": 642,
+        "total_sales_volume_inr": 2450000.0,
+        "total_units_sold": 1184,
+        "order_defect_rate_pct": 0.35,
+        "on_time_delivery_rate_pct": 98.4,
+        "customer_response_time_minutes": 18
+      },
+      "financial_settlement": {
+        "settlement_bank": "State Bank of India (SBI)",
+        "account_holder_name": "Kisan Agri-Tech Pvt Ltd",
+        "account_number_masked": "XXXXXX9942",
+        "ifsc_code": "SBIN0001234",
+        "branch": "MIDC Baramati Branch",
+        "settlement_cycle": "T+2 Rolling Settlement",
+        "marketplace_commission_rate_pct": 3.5
+      },
+      "top_product_asins": [
+        "B0D98MILK01",
+        "B0D98CHIL02",
+        "B0D98FEED03",
+        "B0D98SEW005",
+        "B0D98SOL010"
+      ],
+      "created_at": "2025-08-20T09:00:00Z"
+    }
+  },
+  {
+    "user_id": 5,
+    "email": "vidarbha.textiles@rural.in",
+    "password_hash": "$2b$12$K1.GfO7s/1hTz5vR0ZtX2uC3y4b5a6c7d8e9f0g1h2i3j4k5l6m7n",
+    "role": "seller",
+    "status": "ACTIVE",
+    "seller_profile": {
+      "seller_id": 502,
+      "merchant_store_name": "Vidarbha Powerlooms & Apparel Machinery",
+      "legal_company_name": "Vidarbha Textile Engineering LLP",
+      "seller_tier": "GOLD_SUPPLIER",
+      "merchant_badge": "SCA Nodal Partner",
+      "compliance_tax": {
+        "gstin": "27AABVT5678L1Z2",
+        "pan_number": "AABVT5678L",
+        "is_sca_certified": true,
+        "sca_nodal_license": "SCA-MKT-MH-2026-8890",
+        "iso_certification": "CE Certified Heavy Garment Tooling"
+      },
+      "fulfillment_logistics": {
+        "fulfillment_model": "MERCHANT_FULFILLED_SCA_INSPECTED",
+        "dispatch_sla_hours": 48,
+        "primary_warehouse": {
+          "warehouse_code": "WH-NAG-TEX-02",
+          "street_address": "Plot 88, Cotton Market Yard",
+          "district": "Nagpur",
+          "state": "Maharashtra",
+          "postal_code": "440018",
+          "storage_capacity_sqft": 8500,
+          "has_cold_chain_storage": false
+        },
+        "coverage_radius_km": 250,
+        "courier_partners": ["GATI KWE", "Safexpress"]
+      },
+      "merchant_performance": {
+        "store_rating": 4.74,
+        "total_reviews": 318,
+        "total_sales_volume_inr": 1280000.0,
+        "total_units_sold": 490,
+        "order_defect_rate_pct": 0.62,
+        "on_time_delivery_rate_pct": 96.8,
+        "customer_response_time_minutes": 35
+      },
+      "financial_settlement": {
+        "settlement_bank": "Bank of Baroda",
+        "account_holder_name": "Vidarbha Textile Eng LLP",
+        "account_number_masked": "XXXXXX5512",
+        "ifsc_code": "BARB0VAPNAX",
+        "branch": "Gandhi Sagar Nagpur",
+        "settlement_cycle": "T+3 Settlement",
+        "marketplace_commission_rate_pct": 4.0
+      },
+      "top_product_asins": [
+        "B0D98SEW005",
+        "B0D98INT006",
+        "B0D98SEAL08"
+      ],
+      "created_at": "2025-11-12T11:45:00Z"
+    }
+  }
+]

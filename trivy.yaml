@@ -1,0 +1,8 @@
+### Trivy Container CVE Vulnerability Scanner Configuration (Section 8.1)
+exit-code: 1
+severity:
+  - HIGH
+  - CRITICAL
+ignore-unfixed: true
+format: table
+timeout: 10m0s

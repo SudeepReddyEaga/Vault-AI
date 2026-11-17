@@ -1,0 +1,149 @@
+[
+  {
+    "user_id": 1,
+    "email": "ramesh.patil@rural.in",
+    "password_hash": "$2b$12$K1.GfO7s/1hTz5vR0ZtX2uC3y4b5a6c7d8e9f0g1h2i3j4k5l6m7n",
+    "role": "customer",
+    "status": "ACTIVE",
+    "customer_profile": {
+      "customer_id": 101,
+      "first_name": "Ramesh",
+      "last_name": "Patil",
+      "phone": "+91-9876501122",
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop",
+      "kyc_status": "VERIFIED_AADHAAR",
+      "aadhaar_last_four": "8821",
+      "shipping_address": {
+        "address_line1": "Plot No. 14, Near Primary Health Center",
+        "village": "Shivaji Nagar",
+        "gram_panchayat": "Shivaji Nagar GP",
+        "block": "Baramati",
+        "district": "Pune",
+        "state": "Maharashtra",
+        "postal_code": "413102",
+        "country": "India",
+        "is_default": true
+      },
+      "enterprise_financials": {
+        "available_margin_capital": 100000.0,
+        "margin_percentage": 10.0,
+        "target_business_category": "Dairy",
+        "feasible_project_cost": 1000000.0,
+        "eligible_concessional_scheme": "Term Loan Scheme",
+        "eligible_loan_amount": 900000.0,
+        "concessional_interest_rate_pa": 8.0,
+        "tenure_years": 7,
+        "moratorium_months": 6,
+        "quarterly_emi": 40500.0,
+        "dscr_health_score": 88
+      },
+      "amazon_membership": {
+        "customer_tier": "PRIME_RURAL_BENEFICIARY",
+        "subsidy_card_number": "MH-PUN-SCA-2026-0914",
+        "digital_wallet_balance": 14250.0,
+        "preferred_language": "hi",
+        "currency": "INR"
+      },
+      "browsing_interests": ["Bulk Milk Cooler", "Automatic Milking Claws", "High-Protein Cattle Feed 50kg", "Silage Storage Tanks"],
+      "created_at": "2026-01-15T08:30:00Z"
+    }
+  },
+  {
+    "user_id": 2,
+    "email": "sunita.sharma@rural.in",
+    "password_hash": "$2b$12$K1.GfO7s/1hTz5vR0ZtX2uC3y4b5a6c7d8e9f0g1h2i3j4k5l6m7n",
+    "role": "customer",
+    "status": "ACTIVE",
+    "customer_profile": {
+      "customer_id": 102,
+      "first_name": "Sunita",
+      "last_name": "Sharma",
+      "phone": "+91-9822334455",
+      "avatar_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop",
+      "kyc_status": "VERIFIED_AADHAAR",
+      "aadhaar_last_four": "4219",
+      "shipping_address": {
+        "address_line1": "House No. 42, Weavers Colony",
+        "village": "Bhim Nagar",
+        "gram_panchayat": "Malegaon GP",
+        "block": "Baramati",
+        "district": "Pune",
+        "state": "Maharashtra",
+        "postal_code": "413115",
+        "country": "India",
+        "is_default": true
+      },
+      "enterprise_financials": {
+        "available_margin_capital": 50000.0,
+        "margin_percentage": 10.0,
+        "target_business_category": "Textiles",
+        "feasible_project_cost": 500000.0,
+        "eligible_concessional_scheme": "Term Loan Scheme",
+        "eligible_loan_amount": 450000.0,
+        "concessional_interest_rate_pa": 8.0,
+        "tenure_years": 7,
+        "moratorium_months": 6,
+        "quarterly_emi": 20250.0,
+        "dscr_health_score": 82
+      },
+      "amazon_membership": {
+        "customer_tier": "PRIME_RURAL_BENEFICIARY",
+        "subsidy_card_number": "MH-PUN-SCA-2026-1188",
+        "digital_wallet_balance": 8500.0,
+        "preferred_language": "en",
+        "currency": "INR"
+      },
+      "browsing_interests": ["Industrial Sewing Machine", "5-Thread Interlock Stitcher", "Cotton Fabric Bolts"],
+      "created_at": "2026-02-10T10:15:00Z"
+    }
+  },
+  {
+    "user_id": 3,
+    "email": "ganesh.jadhav@rural.in",
+    "password_hash": "$2b$12$K1.GfO7s/1hTz5vR0ZtX2uC3y4b5a6c7d8e9f0g1h2i3j4k5l6m7n",
+    "role": "customer",
+    "status": "ACTIVE",
+    "customer_profile": {
+      "customer_id": 103,
+      "first_name": "Ganesh",
+      "last_name": "Jadhav",
+      "phone": "+91-9855667788",
+      "avatar_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop",
+      "kyc_status": "VERIFIED_AADHAAR",
+      "aadhaar_last_four": "9051",
+      "shipping_address": {
+        "address_line1": "Opposite Gram Panchayat Bhavan",
+        "village": "Morgaon",
+        "gram_panchayat": "Morgaon GP",
+        "block": "Baramati",
+        "district": "Pune",
+        "state": "Maharashtra",
+        "postal_code": "412304",
+        "country": "India",
+        "is_default": true
+      },
+      "enterprise_financials": {
+        "available_margin_capital": 14000.0,
+        "margin_percentage": 10.0,
+        "target_business_category": "Retail",
+        "feasible_project_cost": 140000.0,
+        "eligible_concessional_scheme": "Micro Finance Scheme",
+        "eligible_loan_amount": 125000.0,
+        "concessional_interest_rate_pa": 6.5,
+        "tenure_years": 3,
+        "moratorium_months": 3,
+        "quarterly_emi": 11500.0,
+        "dscr_health_score": 91
+      },
+      "amazon_membership": {
+        "customer_tier": "MICRO_ENTERPRISE_BENEFICIARY",
+        "subsidy_card_number": "MH-PUN-SCA-2026-0045",
+        "digital_wallet_balance": 5200.0,
+        "preferred_language": "hi",
+        "currency": "INR"
+      },
+      "browsing_interests": ["Continuous Band Sealer", "Electronic Weighing Scale", "Micro FMCG Sachet Packs"],
+      "created_at": "2026-03-01T14:20:00Z"
+    }
+  }
+]

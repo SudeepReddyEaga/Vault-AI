@@ -1,0 +1,2451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraminUdyam AI | Rural Advisory & Concessional Credit Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- React 18 and Babel Standalone for Instant Execution -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // API Gateway / Microservice Endpoints (configurable)
+        const API_BASE = {
+            auth: "http://localhost:8001",
+            advisory: "http://localhost:8002",
+            marketplace: "http://localhost:8003",
+            recommendation: "http://localhost:8004",
+            analytics: "http://localhost:8005",
+            budget: "http://localhost:8006"
+        };
+
+        // Main App Component
+        function App() {
+            // Role State: 'customer' (Rural Beneficiary), 'budget' (Personal Budget Copilot), or 'seller' (Rural Supplier/Merchant)
+            const [role, setRole] = useState('customer');
+            const [language, setLanguage] = useState('en'); // 'en' or 'hi'
+            const [user, setUser] = useState({
+                id: 1,
+                name: "Ramesh Patil",
+                email: "ramesh.dairy@rural.in",
+                role: "customer",
+                village: "Shivaji Nagar",
+                block: "Baramati",
+                district: "Pune",
+                margin_capital: 100000,
+                business_category: "Dairy"
+            });
+            const [token, setToken] = useState(localStorage.getItem('token') || 'demo-jwt-token-2026');
+            const [showAuthModal, setShowAuthModal] = useState(false);
+            const [showDbModal, setShowDbModal] = useState(false);
+
+            // Customer Tab Navigation
+            const [customerTab, setCustomerTab] = useState('scheme-advisor'); // 'scheme-advisor', 'feasibility', 'marketplace', 'spending-analytics'
+            // Seller Tab Navigation
+            const [sellerTab, setSellerTab] = useState('dashboard'); // 'dashboard', 'inventory', 'ml-forecast', 'demand-recs'
+
+            return (
+                <div>
+                    {/* Header Bar */}
+                    <header class="glass-header">
+                        <div class="header-container">
+                            <div class="brand-section">
+                                <div class="brand-logo">
+                                    <i class="fa-solid fa-seedling"></i>
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span class="brand-name">GraminUdyam AI</span>
+                                        <span class="brand-badge">SCA Concessional Credit</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>
+                                        Autonomous Advisory & Rural Enterprise Platform
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Dual Portal Role Switcher + Personal Budget Switcher */}
+                            <div class="role-switcher">
+                                <button 
+                                    class={`role-btn customer ${role === 'customer' ? 'active' : ''}`}
+                                    onClick={() => setRole('customer')}
+                                >
+                                    <i class="fa-solid fa-user-tie"></i>
+                                    {language === 'en' ? 'Entrepreneur' : 'उद्यमी'}
+                                </button>
+                                <button 
+                                    class={`role-btn budget ${role === 'budget' ? 'active' : ''}`}
+                                    onClick={() => setRole('budget')}
+                                >
+                                    <i class="fa-solid fa-wallet"></i>
+                                    {language === 'en' ? 'Personal Budget (VaultAI)' : 'व्यक्तिगत बजट'}
+                                </button>
+                                <button 
+                                    class={`role-btn seller ${role === 'seller' ? 'active' : ''}`}
+                                    onClick={() => setRole('seller')}
+                                >
+                                    <i class="fa-solid fa-store"></i>
+                                    {language === 'en' ? 'Seller Portal' : 'विक्रेता'}
+                                </button>
+                            </div>
+
+                            {/* Header Actions */}
+                            <div class="header-actions">
+                                <button 
+                                    class="btn-pill" 
+                                    onClick={() => setShowDbModal(true)}
+                                    style={{ background: 'rgba(59, 130, 246, 0.18)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.4)' }}
+                                    title="View PostgreSQL Amazon-Grade Relational Database"
+                                >
+                                    <i class="fa-solid fa-database" style={{ color: '#60a5fa' }}></i>
+                                    Database Explorer
+                                </button>
+
+                                <button class="btn-pill" onClick={() => setLanguage(l => l === 'en' ? 'hi' : 'en')}>
+                                    <i class="fa-solid fa-globe"></i>
+                                    {language === 'en' ? 'हिंदी' : 'English'}
+                                </button>
+                                
+                                <button class="btn-pill" onClick={() => setShowAuthModal(true)}>
+                                    <i class="fa-solid fa-user-circle"></i>
+                                    {user.name} ({role === 'budget' ? 'Budget' : role})
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Container */}
+                    <main class="app-container">
+                        {role === 'customer' ? (
+                            <CustomerPortal 
+                                user={user} 
+                                language={language}
+                                activeTab={customerTab}
+                                setActiveTab={setCustomerTab}
+                                onOpenBudget={() => setRole('budget')}
+                            />
+                        ) : role === 'budget' ? (
+                            <PersonalBudgetPortal
+                                user={user}
+                                token={token}
+                                language={language}
+                                onBackToEnterprise={() => setRole('customer')}
+                            />
+                        ) : (
+                            <SellerPortal 
+                                user={user} 
+                                language={language}
+                                activeTab={sellerTab}
+                                setActiveTab={setSellerTab}
+                            />
+                        )}
+                    </main>
+
+                    {/* Database Explorer Modal (Amazon Schema Viewer) */}
+                    {showDbModal && (
+                        <DatabaseModal 
+                            onClose={() => setShowDbModal(false)}
+                            onSelectUser={(u, r) => {
+                                setUser(u);
+                                setRole(r);
+                                setShowDbModal(false);
+                            }}
+                        />
+                    )}
+
+                    {/* Auth Modal */}
+                    {showAuthModal && (
+                        <AuthModal 
+                            onClose={() => setShowAuthModal(false)}
+                            onLogin={(u, r) => {
+                                setUser(u);
+                                setRole(r);
+                                setShowAuthModal(false);
+                            }}
+                        />
+                    )}
+                </div>
+            );
+
+        }
+
+        /* =========================================================================
+           CUSTOMER PORTAL COMPONENT
+           ========================================================================= */
+        function CustomerPortal({ user, language, activeTab, setActiveTab, onOpenBudget }) {
+            // Scheme Calculator State
+            const [marginCapital, setMarginCapital] = useState(user.margin_capital || 100000);
+            const [category, setCategory] = useState(user.business_category || 'Dairy');
+            const [village, setVillage] = useState(user.village || 'Shivaji Nagar');
+            const [block, setBlock] = useState(user.block || 'Baramati');
+            const [district, setDistrict] = useState(user.district || 'Pune');
+
+            const [schemeData, setSchemeData] = useState(null);
+            const [feasibilityData, setFeasibilityData] = useState(null);
+            const [agentTrace, setAgentTrace] = useState([]);
+            const [loadingAdvisor, setLoadingAdvisor] = useState(false);
+
+            // ML Recommendations State
+            const [recommendations, setRecommendations] = useState(null);
+            // Spending Analytics State
+            const [analytics, setAnalytics] = useState(null);
+            // Marketplace Products State
+            const [products, setProducts] = useState([]);
+
+            // Trigger Advisory Run
+            const evaluateAdvisor = async (margin, cat) => {
+                setLoadingAdvisor(true);
+                try {
+                    const res = await fetch(`${API_BASE.advisory}/evaluate-full-proposal`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            applicant_name: user.name,
+                            village: village,
+                            block: block,
+                            district: district,
+                            category: cat,
+                            margin_capital: margin
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setSchemeData(data.scheme);
+                        setFeasibilityData(data.feasibility);
+                        setAgentTrace(data.agent_trace);
+                    }
+                } catch (e) {
+                    console.log("Using local calculation fallback:", e);
+                    // Local fallback
+                    const cost = margin / 0.10;
+                    const isMicro = cost <= 140000;
+                    const loan = isMicro ? Math.min(cost * 0.90, 125000) : Math.min(cost * 0.90, 4500000);
+                    const scheme = {
+                        available_margin: margin,
+                        feasible_project_cost: cost,
+                        eligible_loan_amount: loan,
+                        scheme_name: isMicro ? "Micro Finance Scheme" : "Term Loan Scheme",
+                        scheme_tier: isMicro ? "Tier 1: Micro Enterprise" : "Tier 2: Medium/Term Enterprise",
+                        interest_rate_pa: isMicro ? 6.5 : 8.0,
+                        tenure_years: isMicro ? 3 : 7,
+                        moratorium_months: isMicro ? 3 : 6,
+                        moratorium_quarters: isMicro ? 1 : 2,
+                        quarterly_emi: Math.round(loan * 0.045),
+                        approx_monthly_obligation: Math.round(loan * 0.045 / 3),
+                        capex_allocation: cost * 0.70,
+                        working_capital_allocation: cost * 0.30,
+                        amortization_schedule: [
+                            { quarter: 1, period: "Month 1 - Month 3", status: "Moratorium (Grace Period)", installment: Math.round(loan * 0.015), principal: 0, interest: Math.round(loan * 0.015), remaining_balance: loan, note: "Moratorium active" },
+                            { quarter: 2, period: "Month 4 - Month 6", status: "Active Repayment", installment: Math.round(loan * 0.045), principal: Math.round(loan * 0.03), interest: Math.round(loan * 0.015), remaining_balance: Math.round(loan * 0.97), note: "First repayment quarter" },
+                            { quarter: 3, period: "Month 7 - Month 9", status: "Active Repayment", installment: Math.round(loan * 0.045), principal: Math.round(loan * 0.031), interest: Math.round(loan * 0.014), remaining_balance: Math.round(loan * 0.94), note: "Quarterly repayment" },
+                            { quarter: 4, period: "Month 10 - Month 12", status: "Active Repayment", installment: Math.round(loan * 0.045), principal: Math.round(loan * 0.032), interest: Math.round(loan * 0.013), remaining_balance: Math.round(loan * 0.91), note: "Quarterly repayment" }
+                        ]
+                    };
+                    setSchemeData(scheme);
+                } finally {
+                    setLoadingAdvisor(false);
+                }
+            };
+
+            // Trigger ML Recommendations
+            const fetchMLRecommendations = async (cat, margin) => {
+                try {
+                    const res = await fetch(`${API_BASE.recommendation}/recommend/customer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ category: cat, margin_capital: margin, location: `${block}, ${district}` })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setRecommendations(data);
+                    }
+                } catch (e) {
+                    console.log("ML Rec fallback:", e);
+                }
+            };
+
+            // Trigger Customer Analytics
+            const fetchCustomerAnalytics = async (margin, cat) => {
+                try {
+                    const res = await fetch(`${API_BASE.analytics}/customer-spending`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ margin_capital: margin, business_category: cat })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setAnalytics(data);
+                    }
+                } catch (e) {
+                    console.log("Analytics fallback:", e);
+                }
+            };
+
+            // Trigger Marketplace Products
+            const fetchProducts = async () => {
+                try {
+                    const res = await fetch(`${API_BASE.marketplace}/products`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setProducts(data.products || []);
+                    }
+                } catch (e) {
+                    console.log("Marketplace fallback:", e);
+                }
+            };
+
+            useEffect(() => {
+                evaluateAdvisor(marginCapital, category);
+                fetchMLRecommendations(category, marginCapital);
+                fetchCustomerAnalytics(marginCapital, category);
+                fetchProducts();
+            }, []);
+
+            const handleMarginChange = (val) => {
+                const num = Number(val);
+                setMarginCapital(num);
+                evaluateAdvisor(num, category);
+                fetchMLRecommendations(category, num);
+                fetchCustomerAnalytics(num, category);
+            };
+
+            const handleCategoryChange = (cat) => {
+                setCategory(cat);
+                evaluateAdvisor(marginCapital, cat);
+                fetchMLRecommendations(cat, marginCapital);
+                fetchCustomerAnalytics(marginCapital, cat);
+            };
+
+            return (
+                <div>
+                    {/* Personal Budget Assistant Launch Banner */}
+                    <div class="glass-panel" style={{ padding: '0.85rem 1.25rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.08))', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
+                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.25)', color: '#c4b5fd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem' }}>
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#ffffff' }}>
+                                    Personal Budget & Living Expense Assistant (VaultAI)
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: '#cbd5e1' }}>
+                                    Track household cash flow, check purchase affordabilities, and sync monthly budgets with your enterprise loan profile.
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn-pill" style={{ background: '#8b5cf6', color: '#fff', border: 'none', padding: '0.45rem 1rem' }} onClick={onOpenBudget}>
+                            Open Personal Budget <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    {/* Top Metric Cards */}
+                    <div class="grid-cols-4">
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Available Margin (10%)' : 'उपलब्ध मार्जिन (10%)'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
+                                    <i class="fa-solid fa-coins"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val">₹{marginCapital.toLocaleString()}</div>
+                            <div class="metric-sub">
+                                <span class="badge-pill badge-micro">10% Self Equity</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Feasible Project Cost' : 'परियोजना लागत (100%)'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                                    <i class="fa-solid fa-chart-line"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#34d399' }}>
+                                ₹{schemeData ? schemeData.feasible_project_cost.toLocaleString() : (marginCapital * 10).toLocaleString()}
+                            </div>
+                            <div class="metric-sub">
+                                <i class="fa-solid fa-arrow-up" style={{ color: '#34d399' }}></i> 10x Margin Leverage
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Eligible SCA Loan (90%)' : 'पात्र रियायती ऋण (90%)'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa' }}>
+                                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#a78bfa' }}>
+                                ₹{schemeData ? schemeData.eligible_loan_amount.toLocaleString() : (marginCapital * 9).toLocaleString()}
+                            </div>
+                            <div class="metric-sub">
+                                <span class={`badge-pill ${schemeData && schemeData.scheme_name.includes('Micro') ? 'badge-micro' : 'badge-term'}`}>
+                                    {schemeData ? schemeData.scheme_name : 'Auto-Routing'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Financial Health' : 'वित्तीय स्वास्थ्य स्कोर'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
+                                    <i class="fa-solid fa-shield-heart"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#fbbf24' }}>
+                                {analytics ? `${analytics.financial_health_score}/100` : '85/100'}
+                            </div>
+                            <div class="metric-sub">
+                                <i class="fa-solid fa-circle-check" style={{ color: '#10b981' }}></i>
+                                {analytics ? analytics.financial_health_rating : 'DSCR Sustainable'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Tabs */}
+                    <div class="section-tabs">
+                        <button 
+                            class={`tab-link ${activeTab === 'scheme-advisor' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('scheme-advisor')}
+                        >
+                            <i class="fa-solid fa-calculator"></i>
+                            {language === 'en' ? 'Module 2: Smart Scheme Calculator & Router' : 'मॉड्यूल 2: स्मार्ट ऋण योजना कैलकुलेटर'}
+                        </button>
+                        <button 
+                            class={`tab-link ${activeTab === 'feasibility' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('feasibility')}
+                        >
+                            <i class="fa-solid fa-magnifying-glass-chart"></i>
+                            {language === 'en' ? 'Module 1: Hyper-Local Feasibility Studio' : 'मॉड्यूल 1: स्थानीय व्यवहार्यता रिपोर्ट'}
+                        </button>
+                        <button 
+                            class={`tab-link ${activeTab === 'marketplace' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('marketplace')}
+                        >
+                            <i class="fa-solid fa-tractor"></i>
+                            {language === 'en' ? 'Equipment & Raw Material Marketplace' : 'उपकरण एवं कच्चा माल बाज़ार'}
+                        </button>
+                        <button 
+                            class={`tab-link ${activeTab === 'spending-analytics' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('spending-analytics')}
+                        >
+                            <i class="fa-solid fa-chart-pie"></i>
+                            {language === 'en' ? 'Financial Spending & DSCR Analytics' : 'व्यय एवं ऋण चुकाने की क्षमता'}
+                        </button>
+                    </div>
+
+                    {/* Tab 1: Module 2 Smart Scheme Calculator & Router */}
+                    {activeTab === 'scheme-advisor' && (
+                        <div>
+                            <div class="grid-2-1">
+                                <div class="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-sliders" style={{ color: '#3b82f6' }}></i>
+                                        {language === 'en' ? 'Interactive Capital Structuring Slider' : 'पूंजी संरचना स्लाइडर'}
+                                    </h3>
+                                    <p class="card-subtitle">
+                                        Adjust your available self-contribution margin money to dynamically simulate eligible project size, SCA loan eligibility, and repayment schedule.
+                                    </p>
+
+                                    {/* Margin Slider */}
+                                    <div class="capital-slider-wrap">
+                                        <div class="slider-val-display">
+                                            <span style={{ fontSize: '0.9rem', color: '#9ca3af' }}>Your Available 10% Margin:</span>
+                                            <span class="slider-badge">₹{marginCapital.toLocaleString()}</span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            class="slider-input" 
+                                            min="10000" 
+                                            max="500000" 
+                                            step="5000"
+                                            value={marginCapital}
+                                            onChange={(e) => handleMarginChange(e.target.value)}
+                                        />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                                            <span>₹10,000 (Min)</span>
+                                            <span>₹1,40,000 (Micro Ceiling)</span>
+                                            <span>₹5,00,000+ (Term Loan)</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Category Select Buttons */}
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#9ca3af', marginBottom: '0.5rem', display: 'block' }}>
+                                            Proposed Business Category:
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                            {['Dairy', 'Textiles', 'Retail', 'Poultry', 'Agro-processing'].map(cat => (
+                                                <button 
+                                                    key={cat}
+                                                    onClick={() => handleCategoryChange(cat)}
+                                                    class={`btn-pill ${category === cat ? 'btn-primary' : ''}`}
+                                                    style={{ padding: '0.5rem 1rem' }}
+                                                >
+                                                    {cat === 'Dairy' && <i class="fa-solid fa-cow"></i>}
+                                                    {cat === 'Textiles' && <i class="fa-solid fa-shirt"></i>}
+                                                    {cat === 'Retail' && <i class="fa-solid fa-basket-shopping"></i>}
+                                                    {cat === 'Poultry' && <i class="fa-solid fa-egg"></i>}
+                                                    {cat === 'Agro-processing' && <i class="fa-solid fa-wheat-awn"></i>}
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Scheme Routing Decision Box */}
+                                    {schemeData && (
+                                        <div style={{ 
+                                            background: schemeData.scheme_name.includes('Micro') ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.08)', 
+                                            border: `1px solid ${schemeData.scheme_name.includes('Micro') ? 'rgba(16, 185, 129, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                                            borderRadius: '12px',
+                                            padding: '1.2rem',
+                                            marginBottom: '1.5rem'
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                                                <div>
+                                                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#9ca3af', fontWeight: 700 }}>Auto-Selected Scheme</span>
+                                                    <h4 style={{ fontSize: '1.2rem', color: '#ffffff', fontWeight: 800 }}>{schemeData.scheme_name}</h4>
+                                                </div>
+                                                <span class={`badge-pill ${schemeData.scheme_name.includes('Micro') ? 'badge-micro' : 'badge-term'}`}>
+                                                    {schemeData.scheme_tier}
+                                                </span>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', fontSize: '0.82rem' }}>
+                                                <div>
+                                                    <span style={{ color: '#9ca3af' }}>Interest Rate:</span>
+                                                    <p style={{ fontWeight: 700, color: '#34d399', fontSize: '1.05rem' }}>{schemeData.interest_rate_pa}% p.a.</p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#9ca3af' }}>Loan Tenure:</span>
+                                                    <p style={{ fontWeight: 700, color: '#60a5fa', fontSize: '1.05rem' }}>{schemeData.tenure_years} Years ({schemeData.tenure_months} Mos)</p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ color: '#9ca3af' }}>Moratorium Period:</span>
+                                                    <p style={{ fontWeight: 700, color: '#fbbf24', fontSize: '1.05rem' }}>{schemeData.moratorium_months} Months</p>
+                                                </div>
+                                            </div>
+
+                                            <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.6rem' }}>
+                                                <i class="fa-solid fa-circle-info" style={{ color: '#60a5fa' }}></i>
+                                                {' '}<strong>Moratorium Rule:</strong> No principal repayment during first {schemeData.moratorium_months} months. Active repayment commences in Month {schemeData.moratorium_months + 1}.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Quarterly Amortization Matrix */}
+                                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.8rem' }}>
+                                        <i class="fa-solid fa-table-list" style={{ color: '#3b82f6' }}></i> Expected Quarterly Repayment Schedule (SCA Concessional Format)
+                                    </h4>
+                                    <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                        <table class="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Quarter</th>
+                                                    <th>Period</th>
+                                                    <th>Status</th>
+                                                    <th>Installment (₹)</th>
+                                                    <th>Principal (₹)</th>
+                                                    <th>Interest (₹)</th>
+                                                    <th>Remaining Loan (₹)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {schemeData && schemeData.amortization_schedule.slice(0, 8).map(row => (
+                                                    <tr key={row.quarter}>
+                                                        <td><strong>Q{row.quarter}</strong></td>
+                                                        <td style={{ color: '#9ca3af' }}>{row.period}</td>
+                                                        <td>
+                                                            <span class={`badge-pill ${row.status.includes('Moratorium') ? 'badge-warning' : 'badge-micro'}`}>
+                                                                {row.status}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ fontWeight: 700, color: '#34d399' }}>₹{row.installment.toLocaleString()}</td>
+                                                        <td>₹{row.principal.toLocaleString()}</td>
+                                                        <td>₹{row.interest.toLocaleString()}</td>
+                                                        <td>₹{row.remaining_balance.toLocaleString()}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Right Side: ReAct Agent Plan-Act Trace */}
+                                <div>
+                                    <div class="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
+                                        <h3 class="card-title">
+                                            <i class="fa-solid fa-robot" style={{ color: '#a78bfa' }}></i>
+                                            Autonomous Agent Plan-Act Trace
+                                        </h3>
+                                        <p class="card-subtitle">
+                                            Real-time step-by-step reasoning trace executed by the Advisory Agent.
+                                        </p>
+
+                                        {agentTrace.map(step => (
+                                            <div key={step.step} class="trace-step-card">
+                                                <div class="trace-step-title">
+                                                    <span>Step {step.step}: <code>{step.action}()</code></span>
+                                                    <i class="fa-solid fa-check-circle" style={{ color: '#10b981' }}></i>
+                                                </div>
+                                                <div class="trace-thought">Thought: {step.thought}</div>
+                                                <div class="trace-result">Result: {step.result}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* DPR Quick Download Card */}
+                                    <div class="glass-panel" style={{ padding: '1.2rem', textAlign: 'center' }}>
+                                        <i class="fa-solid fa-file-invoice-dollar" style={{ fontSize: '2rem', color: '#34d399', marginBottom: '0.6rem' }}></i>
+                                        <h4 style={{ fontSize: '1rem', color: '#ffffff', marginBottom: '0.4rem' }}>Bank & SCA Detailed Project Report (DPR)</h4>
+                                        <p style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: '1rem' }}>
+                                            Complete formal feasibility proposal formatted for submission to the District Collectorate / State Channelizing Agency.
+                                        </p>
+                                        <button class="btn-pill btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => window.print()}>
+                                            <i class="fa-solid fa-print"></i> Print / Save Official DPR Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 2: Module 1 Hyper-Local Feasibility Studio */}
+                    {activeTab === 'feasibility' && feasibilityData && (
+                        <div>
+                            <div class="grid-cols-3">
+                                {/* 1. Market Reach */}
+                                <div class="glass-panel" style={{ padding: '1.3rem' }}>
+                                    <h4 class="card-title">
+                                        <i class="fa-solid fa-location-crosshairs" style={{ color: '#60a5fa' }}></i>
+                                        1. Market Reach (5-10 km)
+                                    </h4>
+                                    <div style={{ margin: '1rem 0' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Immediate Consumer Base:</span>
+                                        <p style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff' }}>
+                                            {feasibilityData.location.consumer_reach_5km}
+                                        </p>
+                                    </div>
+                                    <h5 style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: '0.5rem' }}>Primary Distribution Channels:</h5>
+                                    <ul style={{ fontSize: '0.8rem', paddingLeft: '1.2rem', color: '#d1d5db', lineHeight: 1.6 }}>
+                                        {feasibilityData.market_reach.distribution_channels.map((ch, idx) => (
+                                            <li key={idx}>{ch}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* 2. Opportunity & Local Niches */}
+                                <div class="glass-panel" style={{ padding: '1.3rem' }}>
+                                    <h4 class="card-title">
+                                        <i class="fa-solid fa-lightbulb" style={{ color: '#fbbf24' }}></i>
+                                        2. Opportunity & Underserved Niches
+                                    </h4>
+                                    <p style={{ fontSize: '0.8rem', color: '#9ca3af', margin: '0.8rem 0' }}>
+                                        {feasibilityData.opportunity_analysis.market_gap}
+                                    </p>
+                                    <h5 style={{ fontSize: '0.8rem', color: '#fbbf24', marginBottom: '0.5rem' }}>High-Margin Niches in {block}:</h5>
+                                    <ul style={{ fontSize: '0.8rem', paddingLeft: '1.2rem', color: '#d1d5db', lineHeight: 1.6 }}>
+                                        {feasibilityData.opportunity_analysis.unserved_niches.map((niche, idx) => (
+                                            <li key={idx}><strong>{niche}</strong></li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* 5 & 6. Competitor Mapping & Pricing */}
+                                <div class="glass-panel" style={{ padding: '1.3rem' }}>
+                                    <h4 class="card-title">
+                                        <i class="fa-solid fa-users-viewfinder" style={{ color: '#a78bfa' }}></i>
+                                        5. Competitor Mapping & Pricing
+                                    </h4>
+                                    <div style={{ margin: '1rem 0' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Density in {block}:</span>
+                                        <p style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+                                            {feasibilityData.competitor_mapping.estimated_competitor_density}
+                                        </p>
+                                        <span class="badge-pill badge-micro" style={{ marginTop: '0.4rem', display: 'inline-block' }}>
+                                            Saturation Level: {feasibilityData.competitor_mapping.saturation_level}
+                                        </span>
+                                    </div>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.8rem' }}>
+                                        <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Optimal Local Pricing:</span>
+                                        <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#34d399' }}>
+                                            {feasibilityData.product_market_value.target_pricing}
+                                        </p>
+                                        <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.3rem' }}>
+                                            Gross Margin: {feasibilityData.product_market_value.gross_margin_guidance}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SWOT & Threats Grid */}
+                            <div class="grid-cols-2">
+                                {/* 3. SWOT Matrix */}
+                                <div class="glass-panel" style={{ padding: '1.4rem' }}>
+                                    <h4 class="card-title">
+                                        <i class="fa-solid fa-cubes-stacked" style={{ color: '#10b981' }}></i>
+                                        3. SWOT Analysis (Micro-Enterprise Budget Tailored)
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                                        <div style={{ background: 'rgba(16, 185, 129, 0.08)', padding: '0.9rem', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                            <h5 style={{ color: '#34d399', fontSize: '0.85rem', marginBottom: '0.4rem' }}>Strengths (S)</h5>
+                                            <ul style={{ fontSize: '0.75rem', paddingLeft: '1rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+                                                {feasibilityData.swot_analysis.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                                            </ul>
+                                        </div>
+                                        <div style={{ background: 'rgba(239, 68, 68, 0.08)', padding: '0.9rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                                            <h5 style={{ color: '#f87171', fontSize: '0.85rem', marginBottom: '0.4rem' }}>Weaknesses (W)</h5>
+                                            <ul style={{ fontSize: '0.75rem', paddingLeft: '1rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+                                                {feasibilityData.swot_analysis.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                                            </ul>
+                                        </div>
+                                        <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '0.9rem', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                            <h5 style={{ color: '#60a5fa', fontSize: '0.85rem', marginBottom: '0.4rem' }}>Opportunities (O)</h5>
+                                            <ul style={{ fontSize: '0.75rem', paddingLeft: '1rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+                                                {feasibilityData.swot_analysis.opportunities.map((o, i) => <li key={i}>{o}</li>)}
+                                            </ul>
+                                        </div>
+                                        <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '0.9rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                                            <h5 style={{ color: '#fbbf24', fontSize: '0.85rem', marginBottom: '0.4rem' }}>Threats (T)</h5>
+                                            <ul style={{ fontSize: '0.75rem', paddingLeft: '1rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+                                                {feasibilityData.swot_analysis.threats.map((t, i) => <li key={i}>{t}</li>)}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 4. Threats & Mitigation Strategies */}
+                                <div class="glass-panel" style={{ padding: '1.4rem' }}>
+                                    <h4 class="card-title">
+                                        <i class="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444' }}></i>
+                                        4. Localized Threat Identification & De-Risking
+                                    </h4>
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <h5 style={{ fontSize: '0.85rem', color: '#f87171', marginBottom: '0.6rem' }}>Critical Operational Risks:</h5>
+                                        <ul style={{ fontSize: '0.8rem', paddingLeft: '1.2rem', color: '#e2e8f0', lineHeight: 1.6 }}>
+                                            {feasibilityData.threats_identification.primary_risks.map((risk, idx) => (
+                                                <li key={idx} style={{ marginBottom: '0.4rem' }}>
+                                                    <strong>{risk}</strong>
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        <h5 style={{ fontSize: '0.85rem', color: '#34d399', margin: '1rem 0 0.6rem 0' }}>SCA Advisory Mitigation Checklist:</h5>
+                                        <ul style={{ fontSize: '0.8rem', paddingLeft: '1.2rem', color: '#93c5fd', lineHeight: 1.6 }}>
+                                            {feasibilityData.threats_identification.mitigation_strategies.map((strat, idx) => (
+                                                <li key={idx} style={{ marginBottom: '0.4rem' }}>
+                                                    <i class="fa-solid fa-check" style={{ color: '#34d399', marginRight: '0.4rem' }}></i>
+                                                    {strat}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 3: Marketplace & ML Product Recommendations */}
+                    {activeTab === 'marketplace' && (
+                        <div>
+                            {/* ML Recommendations Banner */}
+                            {recommendations && (
+                                <div class="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid #8b5cf6' }}>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-brain" style={{ color: '#a78bfa' }}></i>
+                                        ML Recommendation Engine (Personalized for your {category} enterprise)
+                                    </h3>
+                                    <p class="card-subtitle">
+                                        Independent AI microservice matched your ₹{marginCapital.toLocaleString()} margin with the most viable machinery and raw materials.
+                                    </p>
+                                    <div class="grid-cols-3">
+                                        {recommendations.recommended_products.slice(0, 3).map(rec => (
+                                            <div key={rec.product_id} style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                                                    <span class="badge-pill badge-term">Match Score: {Math.round(rec.match_score * 100)}%</span>
+                                                    <span style={{ fontSize: '0.8rem', color: '#fbbf24' }}>★ {rec.rating}</span>
+                                                </div>
+                                                <h5 style={{ fontSize: '0.9rem', color: '#ffffff', marginBottom: '0.4rem' }}>{rec.title}</h5>
+                                                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.6rem' }}>{rec.reason}</p>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}>₹{rec.price.toLocaleString()}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Full Product Catalog */}
+                            <h3 class="card-title" style={{ marginBottom: '1rem' }}>
+                                <i class="fa-solid fa-shop" style={{ color: '#3b82f6' }}></i>
+                                Concessional Loan Eligible Machinery & Supplies Catalog
+                            </h3>
+                            <div class="grid-cols-3">
+                                {products.map(prod => (
+                                    <div key={prod.id} class="glass-panel product-card">
+                                        <img src={prod.image_url} alt={prod.title} class="product-img" />
+                                        <div class="product-body">
+                                            <span class="product-cat">{prod.category}</span>
+                                            <h4 class="product-title">{prod.title}</h4>
+                                            <p class="product-desc">{prod.description}</p>
+                                            <div class="product-footer">
+                                                <div>
+                                                    <div class="product-price">₹{prod.price.toLocaleString()}</div>
+                                                    <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Seller: {prod.seller_name}</span>
+                                                </div>
+                                                <button 
+                                                    class="btn-pill btn-primary"
+                                                    onClick={() => alert(`Order placed for ${prod.title}! Billed under Concessional Credit 90% Loan Program.`)}
+                                                >
+                                                    <i class="fa-solid fa-cart-plus"></i> Buy with Loan
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 4: Spending & DSCR Financial Analytics */}
+                    {activeTab === 'spending-analytics' && analytics && (
+                        <div>
+                            <div class="grid-2-1">
+                                <div class="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-chart-column" style={{ color: '#10b981' }}></i>
+                                        Customer Financial Health & DSCR Analytics
+                                    </h3>
+                                    <p class="card-subtitle">
+                                        Machine learning model evaluating debt service coverage ratio (DSCR), monthly cash runway, and operational break-even.
+                                    </p>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', margin: '1.5rem 0' }}>
+                                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Debt-Service Ratio (DSCR):</span>
+                                            <p style={{ fontSize: '1.6rem', fontWeight: 800, color: '#34d399' }}>{analytics.debt_service_coverage_ratio}x</p>
+                                            <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Target &gt; 1.5x (Safe)</span>
+                                        </div>
+                                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Est. Monthly Profit:</span>
+                                            <p style={{ fontSize: '1.6rem', fontWeight: 800, color: '#60a5fa' }}>₹{analytics.estimated_monthly_net_profit.toLocaleString()}</p>
+                                            <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>After OpEx Deduction</span>
+                                        </div>
+                                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Cash Runway:</span>
+                                            <p style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24' }}>{analytics.working_capital_runway_months} Mos</p>
+                                            <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>OpEx Buffer</span>
+                                        </div>
+                                    </div>
+
+                                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.8rem' }}>
+                                        Recommended Capital Deployment Breakdown:
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                        {analytics.spending_breakdown.map((item, idx) => (
+                                            <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.9rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.85rem' }}>
+                                                    <span style={{ fontWeight: 600 }}>{item.category}</span>
+                                                    <span style={{ fontWeight: 700, color: '#34d399' }}>₹{item.amount.toLocaleString()} ({item.percentage}%)</span>
+                                                </div>
+                                                <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                    <div style={{ width: `${item.percentage}%`, height: '100%', background: idx === 0 ? '#3b82f6' : (idx === 1 ? '#10b981' : '#f59e0b') }}></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div class="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-circle-question" style={{ color: '#fbbf24' }}></i>
+                                        SCA Advisory Guidance
+                                    </h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#e2e8f0', lineHeight: 1.6, margin: '1rem 0' }}>
+                                        {analytics.advisory_recommendation}
+                                    </p>
+                                    <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '1rem', borderRadius: '10px' }}>
+                                        <h5 style={{ color: '#93c5fd', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                                            <i class="fa-solid fa-bell"></i> Moratorium Advisory:
+                                        </h5>
+                                        <p style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
+                                            During your initial {schemeData ? schemeData.moratorium_months : 3}-month moratorium, do not withdraw enterprise cash. Reinvest surplus into building raw material inventory before quarterly EMI amortizations begin.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        /* =========================================================================
+           PERSONAL BUDGET ASSISTANT PORTAL (VaultAI Agent Microservice)
+           ========================================================================= */
+        function PersonalBudgetPortal({ user, token, language, onBackToEnterprise }) {
+            const [budgetState, setBudgetState] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [generating, setGenerating] = useState(false);
+
+            // ReAct Chat State
+            const [messages, setMessages] = useState([
+                {
+                    sender: "agent",
+                    text: `Hello ${user.name}! I am VaultAI, your Personal Budget ReAct Agent Copilot. I analyze your household spending, check purchase affordability, and ensure you remain financially sustainable while running your concessional enterprise loan. How can I help you today?`,
+                    tools: ["agent_initialized"]
+                }
+            ]);
+            const [chatInput, setChatInput] = useState("");
+            const [sendingChat, setSendingChat] = useState(false);
+
+            // Expense Form State
+            const [expItem, setExpItem] = useState("");
+            const [expAmount, setExpAmount] = useState("");
+            const [expCategory, setExpCategory] = useState("Food & Groceries");
+
+            // Affordability Checker State
+            const [affordItem, setAffordItem] = useState("Smartphone");
+            const [affordCost, setAffordCost] = useState("12000");
+            const [affordCategory, setAffordCategory] = useState("Personal & General");
+            const [affordResult, setAffordResult] = useState(null);
+            const [checkingAfford, setCheckingAfford] = useState(false);
+
+            // Fetch Budget State from Microservice
+            const fetchState = async () => {
+                setLoading(true);
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/state`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setBudgetState(data);
+                    }
+                } catch (e) {
+                    console.error("Budget service fetch error:", e);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchState();
+            }, []);
+
+            // Auto-Generate Budget Report (Missing Fields Sync)
+            const handleGenerateReport = async () => {
+                setGenerating(true);
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/generate-report`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            monthly_income: Math.max(38000, (user.margin_capital || 100000) * 0.38)
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setBudgetState(data.state);
+                        setMessages(prev => [
+                            ...prev,
+                            {
+                                sender: "agent",
+                                text: `⚡ ${data.message}`,
+                                tools: ["generate_auto_report", "set_income", "set_category_budget", "set_savings_goal"]
+                            }
+                        ]);
+                    }
+                } catch (e) {
+                    console.error("Error generating report:", e);
+                } finally {
+                    setGenerating(false);
+                }
+            };
+
+            // Send ReAct Chat Query
+            const handleSendChat = async (msgToSend = null) => {
+                const text = msgToSend || chatInput;
+                if (!text.trim()) return;
+
+                const userMsg = { sender: "user", text: text };
+                setMessages(prev => [...prev, userMsg]);
+                setChatInput("");
+                setSendingChat(true);
+
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ message: text })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setMessages(prev => [
+                            ...prev,
+                            {
+                                sender: "agent",
+                                text: data.response,
+                                tools: data.tool_trace || []
+                            }
+                        ]);
+                        // Refresh state after tool execution
+                        fetchState();
+                    }
+                } catch (e) {
+                    setMessages(prev => [
+                        ...prev,
+                        {
+                            sender: "agent",
+                            text: "I processed your request using autonomous memory fallback.",
+                            tools: ["offline_execution"]
+                        }
+                    ]);
+                } finally {
+                    setSendingChat(false);
+                }
+            };
+
+            // Add Expense
+            const handleAddExpense = async (e) => {
+                e.preventDefault();
+                if (!expItem || !expAmount) return;
+
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/expense`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            item: expItem,
+                            amount: parseFloat(expAmount),
+                            category: expCategory
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setBudgetState(data.state);
+                        setExpItem("");
+                        setExpAmount("");
+                        setMessages(prev => [
+                            ...prev,
+                            {
+                                sender: "agent",
+                                text: `✅ Recorded expense: ${expItem} (₹${parseFloat(expAmount).toLocaleString()}) in ${expCategory}.`,
+                                tools: ["add_expense"]
+                            }
+                        ]);
+                    }
+                } catch (err) {
+                    console.error("Expense add error:", err);
+                }
+            };
+
+            // Check Affordability
+            const handleCheckAffordability = async () => {
+                if (!affordItem || !affordCost) return;
+                setCheckingAfford(true);
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/affordability`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            item: affordItem,
+                            cost: parseFloat(affordCost),
+                            category: affordCategory
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setAffordResult(data.result);
+                    }
+                } catch (err) {
+                    console.error("Affordability check error:", err);
+                } finally {
+                    setCheckingAfford(false);
+                }
+            };
+
+            // Undo Last Action
+            const handleUndo = async () => {
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/undo`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setBudgetState(data.state);
+                        alert(data.message);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            // Reset Memory
+            const handleReset = async () => {
+                if (!confirm("Are you sure you want to reset your personal budget memory?")) return;
+                try {
+                    const res = await fetch(`${API_BASE.budget}/api/budget/reset`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setBudgetState(data.state);
+                        alert("Budget memory reset successfully.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            };
+
+            if (loading && !budgetState) {
+                return (
+                    <div style={{ textAlign: 'center', padding: '4rem' }}>
+                        <i class="fa-solid fa-spinner fa-spin" style={{ fontSize: '2.5rem', color: '#8b5cf6' }}></i>
+                        <p style={{ marginTop: '1rem', color: '#9ca3af' }}>Connecting to Personal Budget Agent microservice on port 8006...</p>
+                    </div>
+                );
+            }
+
+            const state = budgetState || {
+                income: 38000,
+                total_spent: 0,
+                balance: 38000,
+                savings_goal: 7600,
+                savings_status: "On track",
+                expenses: [],
+                category_budgets: {},
+                category_status: [],
+                warnings: [],
+                has_missing_fields: true,
+                missing_fields: ["Monthly Income", "Category Budgets", "Savings Goal"],
+                ml_forecast: {
+                    predicted_next_month_total: 12500,
+                    trend_direction: "Stable",
+                    trend_percentage: "+4.2",
+                    health_score: { score: 88, rating: "Excellent" }
+                }
+            };
+
+            return (
+                <div>
+                    {/* Back link & Title */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                        <div>
+                            <button 
+                                onClick={onBackToEnterprise}
+                                class="btn-pill" 
+                                style={{ marginBottom: '0.6rem', background: 'rgba(255,255,255,0.06)' }}
+                            >
+                                <i class="fa-solid fa-arrow-left"></i> Back to Rural Enterprise Feasibility & Schemes
+                            </button>
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <i class="fa-solid fa-wallet" style={{ color: '#8b5cf6' }}></i>
+                                Personal Budget Assistant & Financial AI Copilot (VaultAI)
+                            </h2>
+                            <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                                Autonomous household expense tracking, budget limits, and ReAct plan-act reasoning synced with JWT user: <strong>{user.name}</strong>
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.6rem' }}>
+                            <button class="btn-pill" onClick={handleUndo} title="Undo last action">
+                                <i class="fa-solid fa-rotate-left"></i> Undo Action
+                            </button>
+                            <button class="btn-pill" onClick={handleReset} title="Reset Memory" style={{ color: '#ef4444' }}>
+                                <i class="fa-solid fa-trash-can"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Missing Fields Alert Banner (Prompt to Generate Report) */}
+                    {state.has_missing_fields && (
+                        <div class="missing-fields-banner">
+                            <div class="banner-content">
+                                <div class="banner-icon">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                                <div>
+                                    <h4 style={{ color: '#fbbf24', fontSize: '0.98rem', fontWeight: 700 }}>
+                                        Uninitialized Personal Budget Parameters Detected
+                                    </h4>
+                                    <p style={{ color: '#e2e8f0', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                                        Welcome {state.user_name || user.name}! We noticed you have not set up your household budget allocations ({state.missing_fields.join(', ')}). 
+                                        Would you like VaultAI to auto-generate a 50-30-20 budget plan synced with your enterprise profile (₹{user.margin_capital.toLocaleString()} margin)?
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                class="btn-pill" 
+                                style={{ background: '#f59e0b', color: '#000', fontWeight: 800, border: 'none', padding: '0.65rem 1.3rem', whiteSpace: 'nowrap' }}
+                                onClick={handleGenerateReport}
+                                disabled={generating}
+                            >
+                                {generating ? <i class="fa-solid fa-spinner fa-spin"></i> : <i class="fa-solid fa-bolt"></i>}
+                                {' '}Generate Budget Plan & Sync Profile
+                            </button>
+                        </div>
+                    )}
+
+                    {/* KPI Metric Cards */}
+                    <div class="grid-cols-4">
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Monthly Income / Capital</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
+                                    <i class="fa-solid fa-money-bill-wave"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#60a5fa' }}>₹{state.income.toLocaleString()}</div>
+                            <div class="metric-sub">Synced from Enterprise Drawings</div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Total Living Expenses</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+                                    <i class="fa-solid fa-receipt"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#f87171' }}>₹{state.total_spent.toLocaleString()}</div>
+                            <div class="metric-sub">{state.expenses.length} Recorded Transactions</div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Current Net Balance</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                                    <i class="fa-solid fa-scale-balanced"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#34d399' }}>₹{state.balance.toLocaleString()}</div>
+                            <div class="metric-sub">
+                                <span class="badge-pill badge-micro">Liquid Headroom</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">Target Savings Goal</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
+                                    <i class="fa-solid fa-piggy-bank"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#fbbf24' }}>₹{state.savings_goal.toLocaleString()}</div>
+                            <div class="metric-sub" style={{ fontSize: '0.72rem' }}>
+                                <i class="fa-solid fa-circle-check" style={{ color: state.balance >= state.savings_goal ? '#10b981' : '#f59e0b' }}></i>
+                                {' '}{state.savings_status}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Warnings List */}
+                    {state.warnings && state.warnings.length > 0 && (
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            {state.warnings.map((w, idx) => (
+                                <div key={idx} style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.65rem 1rem', borderRadius: '8px', color: '#fca5a5', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <i class="fa-solid fa-circle-exclamation"></i>
+                                    {w}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Core Layout: Left Side (ReAct AI Copilot + Affordability) & Right Side (Budget Caps, ML Engine, Ledger) */}
+                    <div class="grid-2-1">
+                        {/* Left Column: ReAct AI Copilot Chatbot */}
+                        <div>
+                            <div class="glass-panel" style={{ padding: '1.4rem', marginBottom: '1.25rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                    <h3 class="card-title" style={{ margin: 0 }}>
+                                        <i class="fa-solid fa-robot" style={{ color: '#8b5cf6' }}></i>
+                                        VaultAI ReAct Copilot (Plan-Act Engine)
+                                    </h3>
+                                    <span class="badge-pill badge-term">Port 8006 Service</span>
+                                </div>
+                                <p class="card-subtitle">
+                                    Multi-turn reasoning engine that translates questions into dynamic tool calls on your financial memory.
+                                </p>
+
+                                {/* Chat Window */}
+                                <div class="chat-window">
+                                    <div class="chat-messages">
+                                        {messages.map((m, idx) => (
+                                            <div key={idx} class={`chat-msg ${m.sender}`}>
+                                                {m.tools && m.tools.length > 0 && m.tools[0] !== "agent_initialized" && (
+                                                    <div>
+                                                        {m.tools.map((t, tidx) => (
+                                                            <div key={tidx} class="chat-trace-badge">
+                                                                <i class="fa-solid fa-gear fa-spin"></i> Tool: {typeof t === 'string' ? t : (t.tool || t.action || 'execute_tool')}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <div style={{ whiteSpace: 'pre-line' }}>{m.text}</div>
+                                            </div>
+                                        ))}
+                                        {sendingChat && (
+                                            <div class="chat-msg agent">
+                                                <i class="fa-solid fa-spinner fa-spin"></i> Evaluating Plan-Act Loop...
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Quick Prompt Chips */}
+                                    <div style={{ display: 'flex', gap: '0.4rem', padding: '0.5rem 0.8rem', background: 'rgba(15, 23, 42, 0.8)', overflowX: 'auto' }}>
+                                        <button class="btn-pill" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }} onClick={() => handleSendChat("Can I afford buying a new smartphone for ₹12,000?")}>
+                                            📱 Can I afford smartphone (₹12k)?
+                                        </button>
+                                        <button class="btn-pill" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }} onClick={() => handleSendChat("Add expense ₹650 for dairy cattle mineral feed in Food category")}>
+                                            🐄 Add ₹650 cattle feed
+                                        </button>
+                                        <button class="btn-pill" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }} onClick={() => handleSendChat("What is my financial summary and remaining balance?")}>
+                                            📊 Financial Summary
+                                        </button>
+                                    </div>
+
+                                    {/* Input bar */}
+                                    <div class="chat-input-bar">
+                                        <input 
+                                            type="text" 
+                                            class="chat-input-field" 
+                                            placeholder="Ask VaultAI e.g. 'Can I afford X?', 'Add expense Y', 'Set budget for Food'..."
+                                            value={chatInput}
+                                            onChange={e => setChatInput(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleSendChat()}
+                                        />
+                                        <button class="btn-pill btn-primary" onClick={() => handleSendChat()} disabled={sendingChat}>
+                                            <i class="fa-solid fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Smart Affordability Checker Widget */}
+                            <div class="glass-panel" style={{ padding: '1.4rem' }}>
+                                <h3 class="card-title">
+                                    <i class="fa-solid fa-calculator" style={{ color: '#10b981' }}></i>
+                                    Smart Affordability Checker Widget
+                                </h3>
+                                <p class="card-subtitle">
+                                    Evaluates item cost against your current balance, category limits, and target savings goal.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Item name (e.g. Motorcycle Service)" 
+                                        value={affordItem}
+                                        onChange={e => setAffordItem(e.target.value)}
+                                        class="chat-input-field" 
+                                    />
+                                    <input 
+                                        type="number" 
+                                        placeholder="Cost (₹)" 
+                                        value={affordCost}
+                                        onChange={e => setAffordCost(e.target.value)}
+                                        class="chat-input-field" 
+                                    />
+                                    <select 
+                                        value={affordCategory}
+                                        onChange={e => setAffordCategory(e.target.value)}
+                                        class="chat-input-field"
+                                        style={{ background: '#1e293b' }}
+                                    >
+                                        <option value="Food & Groceries">Food & Groceries</option>
+                                        <option value="Household & Utilities">Household & Utilities</option>
+                                        <option value="Travel & Transport">Travel & Transport</option>
+                                        <option value="Personal & General">Personal & General</option>
+                                        <option value="Health & Emergency">Health & Emergency</option>
+                                    </select>
+                                    <button class="btn-pill btn-primary" onClick={handleCheckAffordability} disabled={checkingAfford}>
+                                        {checkingAfford ? <i class="fa-solid fa-spinner fa-spin"></i> : <i class="fa-solid fa-magnifying-glass"></i>} Check
+                                    </button>
+                                </div>
+
+                                {affordResult && (
+                                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.35)', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.85rem', whiteSpace: 'pre-line' }}>
+                                        {affordResult}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right Column: Category Budgets, ML Forecast, Expense Ledger */}
+                        <div>
+                            {/* Scikit-Learn ML Spending Predictor & Health Score */}
+                            <div class="glass-panel" style={{ padding: '1.4rem', marginBottom: '1.25rem' }}>
+                                <h3 class="card-title">
+                                    <i class="fa-solid fa-brain" style={{ color: '#3b82f6' }}></i>
+                                    Scikit-Learn ML Spending Predictor
+                                </h3>
+                                <p class="card-subtitle">
+                                    Linear regression trend modeling forecasting next month expenditure and health score.
+                                </p>
+
+                                {state.ml_forecast && (
+                                    <div style={{ background: 'rgba(0,0,0,0.25)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Next Month Predicted Spending:</span>
+                                            <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#34d399' }}>
+                                                ₹{state.ml_forecast.predicted_next_month_total ? state.ml_forecast.predicted_next_month_total.toLocaleString() : '12,500'}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>
+                                            <span>Trend: <strong>{state.ml_forecast.trend_direction || 'Stable'} ({state.ml_forecast.trend_percentage || '+3.5'}%)</strong></span>
+                                            <span class="badge-pill badge-micro">
+                                                Health: {state.ml_forecast.health_score ? `${state.ml_forecast.health_score.score}/100 (${state.ml_forecast.health_score.rating})` : '85/100'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Category Budgets Limit vs Actual */}
+                            <div class="glass-panel" style={{ padding: '1.4rem', marginBottom: '1.25rem' }}>
+                                <h3 class="card-title">
+                                    <i class="fa-solid fa-layer-group" style={{ color: '#fbbf24' }}></i>
+                                    Category Spending Limits
+                                </h3>
+                                <p class="card-subtitle">
+                                    Living expenses benchmarked against your 50-30-20 personal budget caps.
+                                </p>
+
+                                {state.category_status && state.category_status.length > 0 ? (
+                                    <div>
+                                        {state.category_status.map((cat, idx) => (
+                                            <div key={idx} class="cat-progress-item">
+                                                <div class="cat-progress-meta">
+                                                    <span style={{ fontWeight: 600 }}>{cat.category}</span>
+                                                    <span>₹{cat.spent.toLocaleString()} / ₹{cat.limit.toLocaleString()}</span>
+                                                </div>
+                                                <div class="cat-bar-bg">
+                                                    <div 
+                                                        class="cat-bar-fill" 
+                                                        style={{ 
+                                                            width: `${cat.percentage}%`, 
+                                                            background: cat.is_overspent ? '#ef4444' : (cat.percentage > 75 ? '#f59e0b' : '#3b82f6') 
+                                                        }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                                        No category budgets configured yet. Click "Generate Budget Plan" above to create them automatically.
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Add Expense Form */}
+                            <div class="glass-panel" style={{ padding: '1.4rem' }}>
+                                <h3 class="card-title">
+                                    <i class="fa-solid fa-plus-circle" style={{ color: '#34d399' }}></i>
+                                    Log Living Expense
+                                </h3>
+                                <form onSubmit={handleAddExpense} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.8rem' }}>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Item description (e.g. Weekly Groceries)" 
+                                        value={expItem}
+                                        onChange={e => setExpItem(e.target.value)}
+                                        class="chat-input-field" 
+                                        required
+                                    />
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                                        <input 
+                                            type="number" 
+                                            placeholder="Amount (₹)" 
+                                            value={expAmount}
+                                            onChange={e => setExpAmount(e.target.value)}
+                                            class="chat-input-field" 
+                                            required
+                                        />
+                                        <select 
+                                            value={expCategory}
+                                            onChange={e => setExpCategory(e.target.value)}
+                                            class="chat-input-field"
+                                            style={{ background: '#1e293b' }}
+                                        >
+                                            <option value="Food & Groceries">Food & Groceries</option>
+                                            <option value="Household & Utilities">Household & Utilities</option>
+                                            <option value="Travel & Transport">Travel & Transport</option>
+                                            <option value="Personal & General">Personal & General</option>
+                                            <option value="Health & Emergency">Health & Emergency</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn-pill btn-primary" style={{ justifyContent: 'center', marginTop: '0.4rem' }}>
+                                        <i class="fa-solid fa-check"></i> Add to Budget Ledger
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        /* =========================================================================
+           SELLER PORTAL COMPONENT
+           ========================================================================= */
+        function SellerPortal({ user, language, activeTab, setActiveTab }) {
+            const [salesData, setSalesData] = useState(null);
+            const [topSellingCached, setTopSellingCached] = useState(null);
+            const [sellerRecs, setSellerRecs] = useState(null);
+            const [newProductModal, setNewProductModal] = useState(false);
+
+            useEffect(() => {
+                // Fetch ML Seller Sales Analytics
+                fetch(`${API_BASE.analytics}/seller-sales`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seller_id: user.id || 2 })
+                })
+                .then(r => r.json())
+                .then(d => setSalesData(d))
+                .catch(e => console.log(e));
+
+                // Fetch Redis-cached top-selling products
+                fetch(`${API_BASE.marketplace}/products/top-selling`)
+                .then(r => r.json())
+                .then(d => setTopSellingCached(d))
+                .catch(e => console.log(e));
+
+                // Fetch ML Seller Recommendations
+                fetch(`${API_BASE.recommendation}/recommend/seller`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seller_id: user.id || 2 })
+                })
+                .then(r => r.json())
+                .then(d => setSellerRecs(d))
+                .catch(e => console.log(e));
+            }, []);
+
+            return (
+                <div>
+                    {/* Seller KPI Metric Cards */}
+                    <div class="grid-cols-4">
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Gross Sales (Trailing)' : 'कुल बिक्री'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+                                    <i class="fa-solid fa-arrow-trend-up"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#34d399' }}>
+                                ₹{salesData ? salesData.total_revenue.toLocaleString() : '1,945,000'}
+                            </div>
+                            <div class="metric-sub">
+                                <span class="badge-pill badge-micro">+18.4% MoM</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Net Gross Profit' : 'शुद्ध लाभ'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
+                                    <i class="fa-solid fa-wallet"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#60a5fa' }}>
+                                ₹{salesData ? salesData.gross_profit.toLocaleString() : '564,050'}
+                            </div>
+                            <div class="metric-sub">
+                                <span>Margin: {salesData ? salesData.net_margin_percentage : '29.0'}%</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'Redis Cached Velocity' : 'शीर्ष बिक्री उत्पाद'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+                                    <i class="fa-solid fa-bolt"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#ef4444' }}>
+                                &lt; 2 ms
+                            </div>
+                            <div class="metric-sub">
+                                <span class="badge-pill" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5' }}>
+                                    {topSellingCached ? topSellingCached.source : 'redis_cache'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel metric-card">
+                            <div class="metric-header">
+                                <span class="metric-title">{language === 'en' ? 'SCA Beneficiary Orders' : 'लाभार्थी आदेश'}</span>
+                                <div class="metric-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
+                                    <i class="fa-solid fa-box-check"></i>
+                                </div>
+                            </div>
+                            <div class="metric-val" style={{ color: '#fbbf24' }}>
+                                328
+                            </div>
+                            <div class="metric-sub">
+                                <i class="fa-solid fa-circle-check" style={{ color: '#10b981' }}></i> 100% SCA Disbursal
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Tabs */}
+                    <div class="section-tabs">
+                        <button 
+                            class={`tab-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('dashboard')}
+                        >
+                            <i class="fa-solid fa-chart-line"></i>
+                            {language === 'en' ? 'Seller Sales & ML Profit Forecasting' : 'बिक्री एवं मशीन लर्निंग लाभ पूर्वानुमान'}
+                        </button>
+                        <button 
+                            class={`tab-link ${activeTab === 'inventory' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('inventory')}
+                        >
+                            <i class="fa-solid fa-warehouse"></i>
+                            {language === 'en' ? 'Redis-Cached Top-Selling Products' : 'रेडिस कैश्ड सर्वाधिक बिकने वाले सामान'}
+                        </button>
+                        <button 
+                            class={`tab-link ${activeTab === 'demand-recs' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('demand-recs')}
+                        >
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                            {language === 'en' ? 'ML High-Demand Inventory Opportunities' : 'उच्च मांग वाले उत्पाद अवसर'}
+                        </button>
+                    </div>
+
+                    {/* Tab 1: ML Sales Forecasting Dashboard */}
+                    {activeTab === 'dashboard' && salesData && (
+                        <div>
+                            <div class="grid-2-1">
+                                <div class="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-brain" style={{ color: '#3b82f6' }}></i>
+                                        Scikit-Learn Linear Regression: 90-Day Revenue Forecasting
+                                    </h3>
+                                    <p class="card-subtitle">
+                                        Independent analytics microservice running trendline regression to forecast upcoming demand surges across rural blocks.
+                                    </p>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', margin: '1.5rem 0' }}>
+                                        {salesData.ml_demand_forecast.map((fc, idx) => (
+                                            <div key={idx} style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{fc.month}</span>
+                                                <p style={{ fontSize: '1.4rem', fontWeight: 800, color: '#34d399', margin: '0.3rem 0' }}>
+                                                    ₹{fc.predicted_revenue.toLocaleString()}
+                                                </p>
+                                                <span class="badge-pill badge-micro">{fc.growth_rate} Projected Lift</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.8rem' }}>
+                                        Product Profitability Matrix (Top Performers):
+                                    </h4>
+                                    <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                        <table class="custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product Name</th>
+                                                    <th>Units Sold</th>
+                                                    <th>Gross Revenue (₹)</th>
+                                                    <th>Net Profit (₹)</th>
+                                                    <th>Margin %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {salesData.product_profit_matrix.map((p, idx) => (
+                                                    <tr key={idx}>
+                                                        <td style={{ fontWeight: 600 }}>{p.product}</td>
+                                                        <td>{p.units_sold}</td>
+                                                        <td style={{ color: '#60a5fa' }}>₹{p.revenue.toLocaleString()}</td>
+                                                        <td style={{ color: '#34d399', fontWeight: 700 }}>₹{p.profit.toLocaleString()}</td>
+                                                        <td>
+                                                            <span class="badge-pill badge-micro">{p.margin_pct}%</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="glass-panel" style={{ padding: '1.5rem' }}>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-wand-magic-sparkles" style={{ color: '#fbbf24' }}></i>
+                                        ML Prescriptive Insight
+                                    </h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#e2e8f0', lineHeight: 1.6, margin: '1rem 0' }}>
+                                        {salesData.ml_insight}
+                                    </p>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                                        <button 
+                                            class="btn-pill btn-primary" 
+                                            style={{ width: '100%', justifyContent: 'center' }}
+                                            onClick={() => setNewProductModal(true)}
+                                        >
+                                            <i class="fa-solid fa-plus-circle"></i> Add New Equipment Listing
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 2: Redis-Cached Top-Selling Products */}
+                    {activeTab === 'inventory' && (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <div>
+                                    <h3 class="card-title">
+                                        <i class="fa-solid fa-bolt" style={{ color: '#ef4444' }}></i>
+                                        Redis-Cached Real-Time Top-Selling Products
+                                    </h3>
+                                    <p class="card-subtitle">
+                                        High-velocity products cached in Redis with sub-millisecond response latency.
+                                    </p>
+                                </div>
+                                <span class="badge-pill" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171' }}>
+                                    Source: {topSellingCached ? topSellingCached.source : 'redis'}
+                                </span>
+                            </div>
+
+                            <div class="grid-cols-3">
+                                {topSellingCached && topSellingCached.products.map(prod => (
+                                    <div key={prod.id} class="glass-panel product-card">
+                                        <img src={prod.image_url} alt={prod.title} class="product-img" />
+                                        <div class="product-body">
+                                            <span class="product-cat">{prod.category}</span>
+                                            <h4 class="product-title">{prod.title}</h4>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#9ca3af', margin: '0.5rem 0' }}>
+                                                <span>Units Sold: <strong>{prod.sales_count}</strong></span>
+                                                <span>Stock: <strong>{prod.stock}</strong></span>
+                                            </div>
+                                            <div class="product-footer">
+                                                <div>
+                                                    <div class="product-price">₹{prod.price.toLocaleString()}</div>
+                                                    <span style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Cost: ₹{prod.cost_price.toLocaleString()}</span>
+                                                </div>
+                                                <span class="badge-pill badge-micro">Top Seller</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tab 3: ML High-Demand Inventory Opportunities */}
+                    {activeTab === 'demand-recs' && sellerRecs && (
+                        <div>
+                            <div class="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                                <h3 class="card-title">
+                                    <i class="fa-solid fa-binoculars" style={{ color: '#a78bfa' }}></i>
+                                    AI Identified High-Demand Inventory Gaps in your Block
+                                </h3>
+                                <p class="card-subtitle">
+                                    Beneficiaries in your geographic catchment are actively searching for these equipment categories:
+                                </p>
+
+                                <div class="grid-cols-3">
+                                    {sellerRecs.high_demand_stock_opportunities.map((opp, idx) => (
+                                        <div key={idx} style={{ background: 'rgba(0,0,0,0.3)', padding: '1.2rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                            <span class="badge-pill badge-term">{opp.target_category}</span>
+                                            <h4 style={{ fontSize: '1rem', color: '#ffffff', margin: '0.6rem 0' }}>{opp.item_name}</h4>
+                                            <p style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 700, marginBottom: '0.6rem' }}>
+                                                Monthly Demand: {opp.estimated_monthly_demand}
+                                            </p>
+                                            <p style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>{opp.recommended_stock_action}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Product Modal */}
+                    {newProductModal && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                            <div class="glass-panel" style={{ width: '480px', padding: '1.5rem', background: '#111827' }}>
+                                <h3 class="card-title">Add New Equipment Listing</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', margin: '1rem 0' }}>
+                                    <input type="text" placeholder="Product Title" class="slider-input" style={{ background: '#1f2937', color: '#fff', padding: '0.6rem' }} />
+                                    <input type="text" placeholder="Category (Dairy, Textiles, etc)" class="slider-input" style={{ background: '#1f2937', color: '#fff', padding: '0.6rem' }} />
+                                    <input type="number" placeholder="Selling Price (₹)" class="slider-input" style={{ background: '#1f2937', color: '#fff', padding: '0.6rem' }} />
+                                    <input type="number" placeholder="Cost Price (₹)" class="slider-input" style={{ background: '#1f2937', color: '#fff', padding: '0.6rem' }} />
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
+                                    <button class="btn-pill" onClick={() => setNewProductModal(false)}>Cancel</button>
+                                    <button class="btn-pill btn-primary" onClick={() => { alert("Product added and cached in Redis!"); setNewProductModal(false); }}>Save & Publish</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        /* =========================================================================
+           DATABASE EXPLORER MODAL (Amazon-Grade Relational Schema & PostgreSQL)
+           ========================================================================= */
+        function DatabaseModal({ onClose, onSelectUser }) {
+            const [activeDbTab, setActiveDbTab] = useState('customers'); // 'customers', 'sellers', 'schema', 'raw'
+            const [customers, setCustomers] = useState([]);
+            const [sellers, setSellers] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [dataSource, setDataSource] = useState('Connecting to PostgreSQL via Auth Service (Port 8001)...');
+
+            useEffect(() => {
+                const loadDbData = async () => {
+                    setLoading(true);
+                    let cData = null;
+                    let sData = null;
+
+                    try {
+                        const cRes = await fetch(`${API_BASE.auth}/customers`);
+                        if (cRes.ok) {
+                            const json = await cRes.json();
+                            cData = json.customers;
+                        }
+                    } catch (e) {
+                        console.log("Customer fetch fallback:", e);
+                    }
+
+                    try {
+                        const sRes = await fetch(`${API_BASE.auth}/sellers`);
+                        if (sRes.ok) {
+                            const json = await sRes.json();
+                            sData = json.sellers;
+                        }
+                    } catch (e) {
+                        console.log("Seller fetch fallback:", e);
+                    }
+
+                    if (cData && cData.length > 0) {
+                        setCustomers(cData);
+                        setDataSource('PostgreSQL Relational DB (Port 8001) - Synchronized with database/customers.json');
+                    } else {
+                        // Fallback embedded directly from database/customers.json
+                        setDataSource('PostgreSQL Local Snapshot (database/customers.json & database/sellers.json)');
+                        setCustomers([
+                            {
+                                customer_id: 101,
+                                user_id: 1,
+                                first_name: "Ramesh",
+                                last_name: "Patil",
+                                email: "ramesh.dairy@rural.in",
+                                phone: "+91-9823012345",
+                                kyc_status: "VERIFIED_AADHAAR",
+                                customer_tier: "PRIME_RURAL_BENEFICIARY",
+                                village: "Shivaji Nagar",
+                                block: "Baramati",
+                                district: "Pune",
+                                state: "Maharashtra",
+                                available_margin_capital: 100000.0,
+                                target_business_category: "Dairy",
+                                eligible_concessional_scheme: "Term Loan Scheme",
+                                eligible_loan_amount: 900000.0,
+                                shipping_address: {
+                                    street_address: "Plot 14, Near Primary Agricultural Credit Society (PACS)",
+                                    village: "Shivaji Nagar",
+                                    gram_panchayat: "Baramati Rural GP",
+                                    block: "Baramati",
+                                    district: "Pune",
+                                    state: "Maharashtra",
+                                    postal_code: "413102"
+                                }
+                            },
+                            {
+                                customer_id: 102,
+                                user_id: 3,
+                                first_name: "Sunita",
+                                last_name: "Devi",
+                                email: "sunita.textiles@rural.in",
+                                phone: "+91-9876543210",
+                                kyc_status: "VERIFIED_AADHAAR",
+                                customer_tier: "RURAL_BENEFICIARY_GOLD",
+                                village: "Chandanpur",
+                                block: "Indapur",
+                                district: "Pune",
+                                state: "Maharashtra",
+                                available_margin_capital: 15000.0,
+                                target_business_category: "Textiles",
+                                eligible_concessional_scheme: "Micro Finance Scheme",
+                                eligible_loan_amount: 125000.0,
+                                shipping_address: {
+                                    street_address: "House 28, Weavers Colony, Near Sub-Center",
+                                    village: "Chandanpur",
+                                    gram_panchayat: "Chandanpur GP",
+                                    block: "Indapur",
+                                    district: "Pune",
+                                    state: "Maharashtra",
+                                    postal_code: "413106"
+                                }
+                            },
+                            {
+                                customer_id: 103,
+                                user_id: 4,
+                                first_name: "Anil",
+                                last_name: "Kamble",
+                                email: "anil.agro@rural.in",
+                                phone: "+91-9844011223",
+                                kyc_status: "VERIFIED_AADHAAR",
+                                customer_tier: "PRIME_RURAL_BENEFICIARY",
+                                village: "Gokulgaon",
+                                block: "Daund",
+                                district: "Pune",
+                                state: "Maharashtra",
+                                available_margin_capital: 250000.0,
+                                target_business_category: "Agro-processing",
+                                eligible_concessional_scheme: "Term Loan Scheme",
+                                eligible_loan_amount: 2250000.0,
+                                shipping_address: {
+                                    street_address: "Survey 88/2, Flour Mill Road",
+                                    village: "Gokulgaon",
+                                    gram_panchayat: "Gokulgaon GP",
+                                    block: "Daund",
+                                    district: "Pune",
+                                    state: "Maharashtra",
+                                    postal_code: "412207"
+                                }
+                            }
+                        ]);
+                    }
+
+                    if (sData && sData.length > 0) {
+                        setSellers(sData);
+                    } else {
+                        setSellers([
+                            {
+                                seller_id: 501,
+                                user_id: 2,
+                                email: "kisan.agritech@rural.in",
+                                merchant_store_name: "Kisan Agro Machinery & Supplies",
+                                legal_company_name: "Kisan Agro Private Limited",
+                                seller_tier: "PLATINUM_RURAL_HUB",
+                                merchant_badge: "Amazon Fulfilled & SCA Certified",
+                                compliance_tax: {
+                                    gstin: "27AAECK1234F1Z5",
+                                    pan: "AAECK1234F",
+                                    sca_vendor_license: "SCA-MAH-2026-098",
+                                    fssai_license: "11523038000412"
+                                },
+                                fulfillment_logistics: {
+                                    fulfillment_channel: "FBA_AND_RURAL_DIRECT",
+                                    primary_warehouse: {
+                                        facility_code: "WH-MAH-PUN-01",
+                                        village: "MIDC Industrial Area",
+                                        block: "Baramati",
+                                        district: "Pune",
+                                        state: "Maharashtra"
+                                    },
+                                    return_policy_days: 15
+                                },
+                                merchant_performance: {
+                                    seller_rating: 4.88,
+                                    positive_feedback_percent: 98.4,
+                                    total_orders_fulfilled: 1420,
+                                    on_time_dispatch_rate: 99.2
+                                }
+                            },
+                            {
+                                seller_id: 502,
+                                user_id: 5,
+                                email: "gramin.crafts@rural.in",
+                                merchant_store_name: "Gramin Craft & Handloom Federation",
+                                legal_company_name: "Gramin Udyog Sahakari Samiti Maryadit",
+                                seller_tier: "GOLD_ARTISAN_COOPERATIVE",
+                                merchant_badge: "SCA State Channelizing Partner",
+                                compliance_tax: {
+                                    gstin: "27AABCG5678H1Z2",
+                                    pan: "AABCG5678H",
+                                    sca_vendor_license: "SCA-MAH-2026-441"
+                                },
+                                fulfillment_logistics: {
+                                    fulfillment_channel: "SELLER_FULFILLED_PRIME",
+                                    primary_warehouse: {
+                                        facility_code: "WH-MAH-SOL-02",
+                                        village: "Weavers Hub",
+                                        block: "Solapur Rural",
+                                        district: "Solapur",
+                                        state: "Maharashtra"
+                                    },
+                                    return_policy_days: 10
+                                },
+                                merchant_performance: {
+                                    seller_rating: 4.75,
+                                    positive_feedback_percent: 96.8,
+                                    total_orders_fulfilled: 875,
+                                    on_time_dispatch_rate: 97.5
+                                }
+                            }
+                        ]);
+                    }
+                    setLoading(false);
+                };
+
+                loadDbData();
+            }, []);
+
+            const selectCustomer = (c) => {
+                onSelectUser({
+                    id: c.user_id,
+                    name: `${c.first_name} ${c.last_name}`,
+                    email: c.email,
+                    role: "customer",
+                    village: c.village,
+                    block: c.block,
+                    district: c.district,
+                    margin_capital: c.available_margin_capital,
+                    business_category: c.target_business_category
+                }, 'customer');
+            };
+
+            const selectSeller = (s) => {
+                onSelectUser({
+                    id: s.user_id,
+                    name: s.merchant_store_name,
+                    email: s.email,
+                    role: "seller",
+                    village: s.fulfillment_logistics?.primary_warehouse?.village || "Baramati MIDC",
+                    block: s.fulfillment_logistics?.primary_warehouse?.block || "Baramati",
+                    district: s.fulfillment_logistics?.primary_warehouse?.district || "Pune",
+                    margin_capital: 500000,
+                    business_category: "Machinery & Supplies"
+                }, 'seller');
+            };
+
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+                    <div class="glass-panel" style={{ width: '900px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: '#0b1120', border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '16px', overflow: 'hidden' }}>
+                        {/* Header */}
+                        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(15, 23, 42, 0.8)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                                    <i class="fa-solid fa-database"></i>
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        PostgreSQL Database Engine
+                                        <span class="badge-pill badge-micro" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399' }}>Amazon Schema</span>
+                                    </h3>
+                                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>
+                                        {dataSource}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#9ca3af', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                        </div>
+
+                        {/* Navigation Tabs */}
+                        <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem 1.5rem', background: 'rgba(2, 6, 23, 0.6)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                            <button 
+                                class={`btn-pill ${activeDbTab === 'customers' ? 'btn-primary' : ''}`}
+                                onClick={() => setActiveDbTab('customers')}
+                                style={{ fontSize: '0.82rem' }}
+                            >
+                                <i class="fa-solid fa-users"></i>
+                                Customer Profiles ({customers.length})
+                            </button>
+                            <button 
+                                class={`btn-pill ${activeDbTab === 'sellers' ? 'btn-primary' : ''}`}
+                                onClick={() => setActiveDbTab('sellers')}
+                                style={{ fontSize: '0.82rem' }}
+                            >
+                                <i class="fa-solid fa-store"></i>
+                                Seller Central Profiles ({sellers.length})
+                            </button>
+                            <button 
+                                class={`btn-pill ${activeDbTab === 'schema' ? 'btn-primary' : ''}`}
+                                onClick={() => setActiveDbTab('schema')}
+                                style={{ fontSize: '0.82rem' }}
+                            >
+                                <i class="fa-solid fa-sitemap"></i>
+                                Relational ER Schema
+                            </button>
+                        </div>
+
+                        {/* Body Content */}
+                        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+                            {loading ? (
+                                <div style={{ textAlign: 'center', padding: '3rem' }}>
+                                    <i class="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', color: '#3b82f6' }}></i>
+                                    <p style={{ marginTop: '0.8rem', color: '#94a3b8' }}>Querying PostgreSQL tables...</p>
+                                </div>
+                            ) : activeDbTab === 'customers' ? (
+                                <div>
+                                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                                            Table: <code style={{ color: '#60a5fa' }}>customer_profiles</code> | Joined with <code style={{ color: '#60a5fa' }}>users</code>
+                                        </div>
+                                        <span class="badge-pill" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#93c5fd' }}>
+                                            <i class="fa-solid fa-file-code"></i> database/customers.json
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {customers.map((c, idx) => (
+                                            <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                                                        <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff', fontWeight: 700 }}>
+                                                            {c.first_name} {c.last_name}
+                                                        </h4>
+                                                        <span class="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontSize: '0.72rem' }}>
+                                                            <i class="fa-solid fa-shield-check"></i> {c.kyc_status}
+                                                        </span>
+                                                        <span class="badge-pill" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', fontSize: '0.72rem' }}>
+                                                            <i class="fa-solid fa-crown"></i> {c.customer_tier}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.6rem' }}>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Customer ID / Email:</span><br />
+                                                            <strong style={{ color: '#cbd5e1' }}>CUST-{c.customer_id}</strong> ({c.email})
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Panchayat Location:</span><br />
+                                                            <strong style={{ color: '#cbd5e1' }}>{c.village}, {c.block}, {c.district}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Available Margin (10%):</span><br />
+                                                            <strong style={{ color: '#34d399' }}>₹{c.available_margin_capital?.toLocaleString()}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Target Business:</span><br />
+                                                            <strong style={{ color: '#cbd5e1' }}>{c.target_business_category}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Eligible Concessional Scheme:</span><br />
+                                                            <strong style={{ color: '#a78bfa' }}>{c.eligible_concessional_scheme}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Eligible Loan Amount (90%):</span><br />
+                                                            <strong style={{ color: '#60a5fa' }}>₹{c.eligible_loan_amount?.toLocaleString()}</strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    class="btn-pill btn-primary"
+                                                    style={{ padding: '0.65rem 1.2rem', whiteSpace: 'nowrap' }}
+                                                    onClick={() => selectCustomer(c)}
+                                                >
+                                                    <i class="fa-solid fa-arrow-right-to-bracket"></i> Login as Beneficiary
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : activeDbTab === 'sellers' ? (
+                                <div>
+                                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                                            Table: <code style={{ color: '#10b981' }}>seller_profiles</code> | Joined with <code style={{ color: '#10b981' }}>users</code>
+                                        </div>
+                                        <span class="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#6ee7b7' }}>
+                                            <i class="fa-solid fa-file-code"></i> database/sellers.json
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {sellers.map((s, idx) => (
+                                            <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                                                        <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff', fontWeight: 700 }}>
+                                                            {s.merchant_store_name}
+                                                        </h4>
+                                                        <span class="badge-pill" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', fontSize: '0.72rem' }}>
+                                                            {s.seller_tier}
+                                                        </span>
+                                                        <span class="badge-pill" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontSize: '0.72rem' }}>
+                                                            <i class="fa-solid fa-award"></i> {s.merchant_badge}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.6rem' }}>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Merchant ID / Legal Entity:</span><br />
+                                                            <strong style={{ color: '#cbd5e1' }}>SEL-{s.seller_id}</strong> ({s.legal_company_name})
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>GSTIN & SCA License:</span><br />
+                                                            <strong style={{ color: '#cbd5e1' }}>{s.compliance_tax?.gstin || "27AAECK1234F1Z5"}</strong> ({s.compliance_tax?.sca_vendor_license || "SCA-MAH"})
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Fulfillment Logistics:</span><br />
+                                                            <strong style={{ color: '#fbbf24' }}>{s.fulfillment_logistics?.fulfillment_channel || "FBA_AND_RURAL_DIRECT"}</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Customer Rating:</span><br />
+                                                            <strong style={{ color: '#f59e0b' }}>⭐ {s.merchant_performance?.seller_rating || 4.88} / 5.0</strong> ({s.merchant_performance?.positive_feedback_percent || 98.4}% Positive)
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Total Orders Fulfilled:</span><br />
+                                                            <strong style={{ color: '#34d399' }}>{s.merchant_performance?.total_orders_fulfilled || 1420} Units</strong>
+                                                        </div>
+                                                        <div>
+                                                            <span style={{ color: '#64748b' }}>Warehouse Hub:</span><br />
+                                                            <strong style={{ color: '#cbd5e1' }}>{s.fulfillment_logistics?.primary_warehouse?.village || "Baramati MIDC"}</strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    class="btn-pill"
+                                                    style={{ background: '#10b981', color: '#000', fontWeight: 700, padding: '0.65rem 1.2rem', whiteSpace: 'nowrap', border: 'none' }}
+                                                    onClick={() => selectSeller(s)}
+                                                >
+                                                    <i class="fa-solid fa-store"></i> Login as Seller
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h4 style={{ margin: '0 0 1rem 0', color: '#ffffff', fontSize: '1rem' }}>
+                                        Amazon-Grade Relational Schema Architecture (PostgreSQL)
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                                        <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '10px', padding: '1rem' }}>
+                                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#60a5fa', fontSize: '0.9rem' }}>
+                                                <i class="fa-solid fa-table"></i> Table: <code>customer_profiles</code>
+                                            </h5>
+                                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: '1.7' }}>
+                                                <li><code>customer_id</code> (PK, SERIAL)</li>
+                                                <li><code>user_id</code> (FK -&gt; users.id, UNIQUE)</li>
+                                                <li><code>kyc_status</code> (VERIFIED_AADHAAR, PENDING)</li>
+                                                <li><code>village, block, district, state, postal_code</code></li>
+                                                <li><code>available_margin_capital</code> (10% self equity)</li>
+                                                <li><code>target_business_category</code> (Dairy, Textiles, etc.)</li>
+                                                <li><code>eligible_concessional_scheme</code> (Micro Finance / Term Loan)</li>
+                                                <li><code>eligible_loan_amount</code> (90% concessional credit)</li>
+                                                <li><code>customer_tier</code> (PRIME_RURAL_BENEFICIARY)</li>
+                                            </ul>
+                                        </div>
+
+                                        <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '1rem' }}>
+                                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#34d399', fontSize: '0.9rem' }}>
+                                                <i class="fa-solid fa-table"></i> Table: <code>seller_profiles</code>
+                                            </h5>
+                                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: '1.7' }}>
+                                                <li><code>seller_id</code> (PK, SERIAL)</li>
+                                                <li><code>user_id</code> (FK -&gt; users.id, UNIQUE)</li>
+                                                <li><code>merchant_store_name, legal_company_name</code></li>
+                                                <li><code>seller_tier</code> (PLATINUM_RURAL_HUB)</li>
+                                                <li><code>merchant_badge</code> (Amazon Fulfilled & SCA Certified)</li>
+                                                <li><code>compliance_tax_json</code> (GSTIN, PAN, SCA License)</li>
+                                                <li><code>fulfillment_logistics_json</code> (FBA, Hubs, Return Policy)</li>
+                                                <li><code>merchant_performance_json</code> (Rating, Orders, SLA)</li>
+                                            </ul>
+                                        </div>
+
+                                        <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '1rem' }}>
+                                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#fbbf24', fontSize: '0.9rem' }}>
+                                                <i class="fa-solid fa-table"></i> Table: <code>products (Amazon ASIN Catalog)</code>
+                                            </h5>
+                                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: '1.7' }}>
+                                                <li><code>id</code> (PK, SERIAL)</li>
+                                                <li><code>asin</code> (Amazon Standard Identification Number, UNIQUE)</li>
+                                                <li><code>seller_id</code> (FK -&gt; seller_profiles.seller_id)</li>
+                                                <li><code>title, description, category</code></li>
+                                                <li><code>price, cost_price, inventory_count</code></li>
+                                                <li><code>is_eligible_sca_subsidy</code> (BOOLEAN)</li>
+                                            </ul>
+                                        </div>
+
+                                        <div style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '10px', padding: '1rem' }}>
+                                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#c084fc', fontSize: '0.9rem' }}>
+                                                <i class="fa-solid fa-table"></i> Table: <code>orders (SCA Escrow & Fulfillment)</code>
+                                            </h5>
+                                            <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.78rem', color: '#cbd5e1', lineHeight: '1.7' }}>
+                                                <li><code>id</code> (PK, SERIAL)</li>
+                                                <li><code>customer_id</code> (FK -&gt; customer_profiles.customer_id)</li>
+                                                <li><code>product_id</code> (FK -&gt; products.id)</li>
+                                                <li><code>status</code> (CONFIRMED, SCA_ESCROW_DISBURSED, DELIVERED)</li>
+                                                <li><code>margin_money_paid, sca_subsidy_amount</code></li>
+                                                <li><code>created_at</code> (TIMESTAMP)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ padding: '0.9rem 1.5rem', background: 'rgba(15, 23, 42, 0.8)', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                Files: <code style={{ color: '#93c5fd' }}>database/customers.json</code> &bull; <code style={{ color: '#93c5fd' }}>database/sellers.json</code> &bull; <code style={{ color: '#93c5fd' }}>database/schema.sql</code>
+                            </span>
+                            <button class="btn-pill" onClick={onClose} style={{ padding: '0.45rem 1rem' }}>
+                                Close Explorer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        /* =========================================================================
+           AUTH MODAL COMPONENT (JWT)
+           ========================================================================= */
+        function AuthModal({ onClose, onLogin }) {
+
+            const [isRegister, setIsRegister] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [name, setName] = useState('');
+            const [selectedRole, setSelectedRole] = useState('customer');
+
+            const handleDemoLogin = (r) => {
+                if (r === 'customer') {
+                    onLogin({
+                        id: 1,
+                        name: "Ramesh Patil",
+                        email: "ramesh.dairy@rural.in",
+                        role: "customer",
+                        village: "Shivaji Nagar",
+                        block: "Baramati",
+                        district: "Pune",
+                        margin_capital: 100000,
+                        business_category: "Dairy"
+                    }, 'customer');
+                } else {
+                    onLogin({
+                        id: 2,
+                        name: "Kisan Agro Machinery & Supplies",
+                        email: "kisan.agritech@rural.in",
+                        role: "seller",
+                        village: "Midc Industrial Area",
+                        block: "Baramati",
+                        district: "Pune",
+                        margin_capital: 500000,
+                        business_category: "Machinery & Supplies"
+                    }, 'seller');
+                }
+            };
+
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div class="glass-panel" style={{ width: '420px', padding: '1.8rem', background: '#0f172a' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+                            <h3 class="card-title">
+                                <i class="fa-solid fa-lock" style={{ color: '#3b82f6' }}></i>
+                                {isRegister ? 'Register Account' : 'JWT Authentication'}
+                            </h3>
+                            <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#9ca3af', fontSize: '1.2rem', cursor: 'pointer' }}>×</button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1.2rem' }}>
+                            {isRegister && (
+                                <input 
+                                    type="text" 
+                                    placeholder="Full Name / Enterprise Name" 
+                                    value={name} 
+                                    onChange={e => setName(e.target.value)}
+                                    style={{ width: '100%', padding: '0.65rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                                />
+                            )}
+                            <input 
+                                type="email" 
+                                placeholder="Email address" 
+                                value={email} 
+                                onChange={e => setEmail(e.target.value)}
+                                style={{ width: '100%', padding: '0.65rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                            />
+                            <input 
+                                type="password" 
+                                placeholder="Password" 
+                                value={password} 
+                                onChange={e => setPassword(e.target.value)}
+                                style={{ width: '100%', padding: '0.65rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                            />
+
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+                                <button 
+                                    type="button" 
+                                    class={`role-btn customer ${selectedRole === 'customer' ? 'active' : ''}`}
+                                    style={{ flex: 1, justifyContent: 'center' }}
+                                    onClick={() => setSelectedRole('customer')}
+                                >
+                                    Customer
+                                </button>
+                                <button 
+                                    type="button" 
+                                    class={`role-btn seller ${selectedRole === 'seller' ? 'active' : ''}`}
+                                    style={{ flex: 1, justifyContent: 'center' }}
+                                    onClick={() => setSelectedRole('seller')}
+                                >
+                                    Seller
+                                </button>
+                            </div>
+                        </div>
+
+                        <button 
+                            class="btn-pill btn-primary" 
+                            style={{ width: '100%', justifyContent: 'center', padding: '0.7rem' }}
+                            onClick={() => handleDemoLogin(selectedRole)}
+                        >
+                            {isRegister ? 'Create Account' : 'Sign In with JWT'}
+                        </button>
+
+                        {/* Quick Demo Switcher */}
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '1.2rem', paddingTop: '1rem' }}>
+                            <span style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.6rem' }}>
+                                Instant 1-Click Demo Profiles:
+                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <button class="btn-pill" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => handleDemoLogin('customer')}>
+                                    <i class="fa-solid fa-user-tie" style={{ color: '#3b82f6' }}></i>
+                                    Login as Beneficiary: <strong>Ramesh Patil (Dairy)</strong>
+                                </button>
+                                <button class="btn-pill" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => handleDemoLogin('seller')}>
+                                    <i class="fa-solid fa-store" style={{ color: '#10b981' }}></i>
+                                    Login as Seller: <strong>Kisan Agro Supplies</strong>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Mount React Root
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+services:
+  # 1. HTTP Web Traffic & HTTPS Gateway (Port 80 / 443)
+  http-gateway:
+    image: nginx:alpine
+    container_name: pba_http_gateway
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - budget-api-service
+      - grafana
+      - prometheus
+    networks:
+      - pba_network
+
+  # 2. budget-api-service (Port 5000)
+  budget-api-service:
+    build:
+      context: ./services/budget_api_service
+      dockerfile: Dockerfile
+    container_name: pba_budget_api_service
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      AI_AGENT_URL: http://ai-agent-copilot:5001
+      ML_ENGINE_URL: http://ml-forecast-engine:5002
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATABASE_URL: postgresql://postgres:postgrespassword2026@postgres:5432/rural_platform_db
+    depends_on:
+      - postgres
+      - redis
+      - ai-agent-copilot
+      - ml-forecast-engine
+    networks:
+      - pba_network
+
+  # 3. ai-agent-copilot (Port 5001)
+  ai-agent-copilot:
+    build:
+      context: ./services/ai_agent_copilot
+      dockerfile: Dockerfile
+    container_name: pba_ai_agent_copilot
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: 5001
+    networks:
+      - pba_network
+
+  # 4. ml-forecast-engine (Port 5002)
+  ml-forecast-engine:
+    build:
+      context: ./services/ml_forecast_engine
+      dockerfile: Dockerfile
+    container_name: pba_ml_forecast_engine
+    restart: always
+    ports:
+      - "5002:5002"
+    environment:
+      PORT: 5002
+    networks:
+      - pba_network
+
+  # 5. PostgreSQL Database (Port 5432)
+  postgres:
+    image: postgres:15-alpine
+    container_name: pba_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword2026
+      POSTGRES_DB: rural_platform_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_devops_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pba_network
+
+  # 6. Redis Cache Cluster (Port 6379)
+  redis:
+    image: redis:7-alpine
+    container_name: pba_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_devops_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pba_network
+
+  # 7. Prometheus Server (Port 9090)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pba_prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - pba_network
+
+  # 8. Grafana Dashboard (Port 3000)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pba_grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana-dashboards:ro
+      - grafana_devops_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - pba_network
+
+  # 9. HashiCorp Vault (Port 8200)
+  vault:
+    image: hashicorp/vault:latest
+    container_name: pba_vault
+    restart: always
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "root-dev-token-2026"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - pba_network
+
+  # 10. Jenkins Master CI/CD Automation (Port 8080) - User's Existing Image & Volume
+  jenkins:
+    image: jenkins-docker:latest
+    container_name: jenkins-container
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - pba_network
+
+volumes:
+  pg_devops_data:
+  redis_devops_data:
+  grafana_devops_data:
+  jenkins_home:
+    external: true
+
+networks:
+  pba_network:
+    driver: bridge
