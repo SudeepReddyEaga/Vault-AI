@@ -26,7 +26,7 @@ pipeline {
                 echo '=== Stage 2: Code Quality & Security Scan (Flake8 & Bandit) ==='
                 sh '''
                     python3 -m pip install --break-system-packages flake8 bandit || pip install flake8 bandit || true
-                    flake8 services tests --count --select=E9,F63,F7,F82 --show-source --statistics || true
+                    python3 -m flake8 services tests --count --select=E9,F63,F7,F82 --show-source --statistics || true
                     bandit -r services/budget_api_service services/ai_agent_copilot services/ml_forecast_engine -c bandit.yaml -f json -o bandit-report.json || true
                     echo "SAST Security scan completed: 0 blocking vulnerabilities."
                 '''
